@@ -1,3 +1,4 @@
+#pragma once
 #include "stackable-functor-allocation/error.h"
 #include <thread>
 #include <functional>
