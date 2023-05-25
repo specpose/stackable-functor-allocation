@@ -40,7 +40,7 @@ namespace SFA {
         virtual void run(){
             if (_thread){
 #if DEBUG
-                throw std::runtime_error("Constructor: Thread is a leftover thread",__FILE__,__func__);
+                throw SFA::util::runtime_error("Constructor: Thread is a leftover thread",__FILE__,__func__);
 #endif
             } else {
                 _thread = new std::thread( std::mem_fn(&Thread::operator()),this );
