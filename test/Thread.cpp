@@ -1,26 +1,16 @@
 #include "stackable-functor-allocation/Thread.hpp"
 #include <iostream>
 
-class ThreadImpl : public SFA::Thread {
+class MyFunctor {
     public:
     void operator()(){
-        _running = true;
-            std::cout << "Thread is running."<<std::endl;
-        _running = false;
+        std::cout << "Thread is running."<<std::endl;
     }
-    ~ThreadImpl() {
-	    join();
-    }
-    bool isRunning(){
-	    return _running;
-    }
-    private:
-    bool _running = false;
 };
 
 int main()
 {
-    auto t1 = ThreadImpl();
+    auto data = MyFunctor();
+    auto t1 = SFA::Thread<MyFunctor>(data);
     t1();
-    t1.stop();
 }
