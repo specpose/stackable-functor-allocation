@@ -4,8 +4,10 @@
 class MyFunctor {
     public:
     void operator()(){
-        std::cout << "Thread is running."<<std::endl;
+        std::cout << message <<std::endl;
     }
+    private:
+    std::string message = std::string{"Thread is running."};
 };
 
 int main()

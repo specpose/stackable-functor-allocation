@@ -17,20 +17,13 @@ namespace SFA {
             }
         };
         virtual ~Thread() {
+            if (_thread) {
 #if DEBUG
-            if (_thread)
                 throw SFA::util::runtime_error("Destructor: Thread is still running",__FILE__,__func__);
 #endif
-        };
-        std::thread::id get_id(){
-            if (_thread){
-                return _thread->get_id();
-            } else {
-#if DEBUG
-                throw SFA::util::runtime_error("Thread does not exist yet",__FILE__,__func__);
-#endif
+                this->join();
             }
-	    }
+        };
         virtual void operator()() final{
             this->join();
         };
