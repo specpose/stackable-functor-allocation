@@ -24,10 +24,12 @@ template<typename T> class FreeStore : public SFA::Lazy<T> {
 
 using data_type = int;
 
-template<> void STL::function<std::vector<data_type>> (
-        std::vector<data_type>::iterator inputStart,
-        std::vector<data_type>::iterator InputEnd,
-        std::vector<data_type>::iterator OutputStart) {
+class ANamedBufferType : public std::vector<data_type> {};
+
+template<> void STL::function<ANamedBufferType> (
+        ANamedBufferType::iterator inputStart,
+        ANamedBufferType::iterator InputEnd,
+        ANamedBufferType::iterator OutputStart) {
         std::cout << "Executing STL::function..." << std::endl;
 };
 
@@ -41,6 +43,6 @@ int main()
     auto lazy = FreeStore<data_type>{};
     lazy();
     auto inputBuffer = std::vector<data_type>{};
-    auto outputBuffer = std::vector<data_type>{};
+    auto outputBuffer = ANamedBufferType{};
     STL::function<decltype(outputBuffer)>(inputBuffer.begin(),inputBuffer.end(),outputBuffer.begin());
 }
