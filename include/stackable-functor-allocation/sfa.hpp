@@ -3,7 +3,7 @@
 #include <vector>
 #include <functional>
 
-namespace NonV {
+/*namespace NonV {
     template<typename T, std::size_t N, std::size_t O=N> struct RAM : public std::array<T,N> {
         public:
         RAM(const std::array<T,O>& inputBuffer) : input(inputBuffer), std::array<T,N>{} {}
@@ -18,7 +18,7 @@ namespace NonV {
         const RAM<T,N,O>& _input;
     };
     //template<std::size_t M, > struct Stack : public std::array<ROM<>&,N> {};
-}
+}*/
 namespace SFA {
     template<typename T, std::size_t N, std::size_t O=N> class Strict : public std::array<T,N> {
         public:
@@ -43,4 +43,14 @@ namespace STL {
         typename InputBufferType::iterator InputEnd,
         typename OutputBufferType::iterator OutputStart
         );
+}
+namespace NonV {
+    //struct Stack : std::forward_list<SFA::Strict<T,N>&> {};
+    template<typename T, std::size_t N, std::size_t O=N> class StackableFunctor : public virtual std::array<T,N> {
+        public:
+        StackableFunctor() : std::array<T,N>{} {}
+        virtual void operator()() const=0;//nonstatic
+        void process() {operator()();};
+        virtual std::size_t constexpr size() = 0;
+    };
 }
