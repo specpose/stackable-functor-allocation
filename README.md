@@ -1,9 +1,9 @@
 # Stackable Functor Allocation
-Is a refactoring pattern. It aims to keep the Functor operator() allocation free. This is useful for converting STL algorithms to SyCL. Potentially it could also be used to migrate to a computer architecture that runs entirely on non-volatile memory. The non-volatile memory would be adressed entirely as a *stack* (if used with SOS), as heap, but not as free-store.
+Is a refactoring pattern. It aims to keep the Functor operator() allocation free and the Functor body free of references. The strict memory is adressed entirely as a *stack*, as heap (size known at compile time), but not as free-store.
 ## Algorithm LifeCycle
 1. C++20/STL
-   - If you have implemented STL algorithms and are looking for ways to accelerate code, there is a span now, that can be used to partition vectors for GPU kernels. Whether it is a vector or an array is not entirely clear. Effectively it is re-introducing a storage-like class into algorithms which have been originally designed to abstract away the storage class. Keep in mind that a GPU is always a rigid hardware implementation and the scope of the API is not a response to future challenges.
+   - If you have implemented STL algorithms and are looking for ways to accelerate code, there is a span now, that can be used to partition vectors for GPU kernels. Effectively it is re-introducing a storage-like class into algorithms which have been originally designed to abstract away the storage class. Keep in mind that a GPU is always a rigid hardware implementation and the scope of the API is not a response to future challenges.
    - The sized_sentinel_for concept of the ranges API presents another approach to address the same problem. The ranges call syntax is similar to Java and is a radical change in programming paradigm.
 2. C++17/SFA
    - SFA is a refactoring pattern which also has a Java-like call syntax. Applying stackable functor allocation may lead to code which is compatible to ranges, but ranges has a few abstractions which make it difficult to write low-level code.
-   - It is object-oriented. It helps converting STL programs into something that ressembles a C program, but keep in mind that object-oriented design *directly* reflects the need to bind registers and memory controllers *locally* to functions. The class body is an abstraction of memory visibility and inheritance is an abstraction of behavior.
+   - It is object-oriented. It helps converting STL programs into something that ressembles a C program.

@@ -3,7 +3,7 @@
 
 class ROMTest : public NonV::ROM {
     public:
-    virtual const void operator()() final {
+    virtual void operator()() const final {
         std::cout << "Executing NonV::ROM..." << std::endl;
         modifyMe = true;
     };
@@ -13,7 +13,7 @@ class ROMTest : public NonV::ROM {
 
 template<typename T, std::size_t HeapSize> class Buffer : public SFA::Strict<T,HeapSize> {
     public:
-    virtual void const operator()() final {
+    virtual void operator()() const final {
         std::cout << "Executing SFA::Strict..." << std::endl;
         this->at(0)=T{};
     };
@@ -21,7 +21,7 @@ template<typename T, std::size_t HeapSize> class Buffer : public SFA::Strict<T,H
 
 template<typename T> class FreeStore : public SFA::Lazy<T> {
     public:
-    virtual void const operator()() final {
+    virtual void operator()() const final {
         std::cout << "Executing SFA::Lazy..." << std::endl;
         this->push_back(T{});
     };
