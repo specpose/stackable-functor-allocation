@@ -28,9 +28,9 @@ namespace SFA {
     };
 }
 namespace STL {
-    template<typename OutputBufferType> void function(
-        typename OutputBufferType::iterator inputStart,
-        typename OutputBufferType::iterator InputEnd,
+    template<typename InputBufferType, typename OutputBufferType> void transform(
+        typename InputBufferType::iterator inputStart,
+        typename InputBufferType::iterator InputEnd,
         typename OutputBufferType::iterator OutputStart
         );
 }

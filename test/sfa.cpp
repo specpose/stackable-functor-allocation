@@ -33,14 +33,14 @@ template<typename T> class FreeStore : public SFA::Lazy<T> {
 
 using data_type = int;
 
-class ANamedBufferType : public std::vector<data_type> {};
-
-template<> void STL::function<ANamedBufferType> (
-        ANamedBufferType::iterator inputStart,
-        ANamedBufferType::iterator inputEnd,
-        ANamedBufferType::iterator outputStart) {
+template<typename InputBufferType, typename OutputBufferType> void STL::transform (
+        typename InputBufferType::iterator inputStart,
+        typename InputBufferType::iterator inputEnd,
+        typename OutputBufferType::iterator outputStart) {
         std::cout << "Executing STL::function..." << std::endl;
-        std::transform(inputStart, inputEnd, outputStart,[](ANamedBufferType::reference a){return ANamedBufferType::value_type{};});
+        std::transform(inputStart, inputEnd, outputStart,
+        [](typename InputBufferType::reference a){return typename OutputBufferType::value_type{};}
+        );
 };
 
 int main()
@@ -54,6 +54,6 @@ int main()
     auto inputVector = std::vector<data_type>{};
     auto lazy = FreeStore<data_type>(inputVector);
     lazy();
-    auto outputBuffer = ANamedBufferType{};
-    STL::function<decltype(outputBuffer)>(inputVector.begin(),inputVector.end(),outputBuffer.begin());
+    auto outputBuffer = std::vector<data_type>{};
+    STL::transform<decltype(inputVector),decltype(outputBuffer)>(inputVector.begin(),inputVector.end(),outputBuffer.begin());
 }
