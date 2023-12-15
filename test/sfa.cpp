@@ -1,8 +1,9 @@
 #include "stackable-functor-allocation/sfa.hpp"
 #include <iostream>
 
-class ROMTest : public NonV::ROM {
+template<typename T, std::size_t N, std::size_t O=N> class ROMTest : public NonV::ROM<T,N,O> {
     public:
+    ROMTest(const NonV::RAM<T,N,O>& inputBufferRef) : NonV::ROM<T,N,O>(inputBufferRef) {}
     virtual void operator()() const final {
         std::cout << "Executing NonV::ROM..." << std::endl;
         //modifyMe = true;
@@ -46,10 +47,11 @@ template<typename InputBufferType, typename OutputBufferType> void STL::transfor
 int main()
 {
     const std::size_t input_length = 2;
-    auto nonv = ROMTest{};
+    auto inputArray = std::array<data_type, input_length>{};
+    auto inputBuffer = NonV::RAM<data_type, input_length-1, input_length>(inputArray);
+    auto nonv = ROMTest<data_type, input_length-1, input_length>(inputBuffer);
     nonv();
-    auto inputArray = std::array<data_type,input_length>{};
-    auto strict = Buffer<data_type, input_length>(inputArray);
+    auto strict = Buffer<data_type, input_length>(inputBuffer.input);
     strict();
     auto inputVector = std::vector<data_type>{};
     auto lazy = FreeStore<data_type>(inputVector);
