@@ -3,22 +3,27 @@
 
 class ROMTest : public NonV::ROM {
     public:
-    constexpr void operator()() {
-        //std::cout << "Executing NonV::ROM..." << std::endl;
+    virtual const void operator()() final {
+        std::cout << "Executing NonV::ROM..." << std::endl;
+        modifyMe = true;
     };
+    private:
+    bool modifyMe = false;
 };
 
 template<typename T, std::size_t HeapSize> class Buffer : public SFA::Strict<T,HeapSize> {
     public:
-    void operator()() {
+    virtual void const operator()() final {
         std::cout << "Executing SFA::Strict..." << std::endl;
+        this->at(0)=T{};
     };
 };
 
 template<typename T> class FreeStore : public SFA::Lazy<T> {
     public:
-    void operator()() {
+    virtual void const operator()() final {
         std::cout << "Executing SFA::Lazy..." << std::endl;
+        this->push_back(T{});
     };
 };
 
@@ -28,9 +33,10 @@ class ANamedBufferType : public std::vector<data_type> {};
 
 template<> void STL::function<ANamedBufferType> (
         ANamedBufferType::iterator inputStart,
-        ANamedBufferType::iterator InputEnd,
-        ANamedBufferType::iterator OutputStart) {
+        ANamedBufferType::iterator inputEnd,
+        ANamedBufferType::iterator outputStart) {
         std::cout << "Executing STL::function..." << std::endl;
+        std::transform(inputStart, inputEnd, outputStart,[](ANamedBufferType::reference a){return ANamedBufferType::value_type{};});
 };
 
 int main()
