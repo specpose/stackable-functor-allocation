@@ -1,28 +1,26 @@
 #include "stackable-functor-allocation/sfa.hpp"
 #include <iostream>
 
-template<typename T, std::size_t N, typename Previous> class SFAItem : public NonV::StackableFunctor<T,N,Previous> {
+template<typename T, typename Previous, int SizeChange=0> class SFAItem : public NonV::StackableFunctor<T,Previous,SizeChange> {
     public:
-    SFAItem(Previous& prev) : NonV::StackableFunctor<T,N,Previous>(prev) {}
+    SFAItem(Previous& prev) : NonV::StackableFunctor<T,Previous,SizeChange>(prev) {}
     virtual void operator()() const final {
-        NonV::StackableFunctor<T,N,Previous>::_input();
-        std::cout << "Executing NonV::ROM..." << std::endl;
+        NonV::StackableFunctor<T,Previous,SizeChange>::_input();
+        std::cout << "Executing NonV::StackableFunctor..." << std::endl;
         //modifyMe = true;
     };
-    virtual std::size_t constexpr size() final {return NonV::StackableFunctor<T,N,Previous>::_input.size()-1;}//size of Previous?
     private:
     bool modifyMe = false;
 };
-template<typename T, std::size_t N, std::size_t O> class SFAFirst : public NonV::StackableFunctor<T,N,std::array<T,O>> {
+template<typename T, std::size_t N> class SFAFirst : public std::array<T,N> {
     public:
-    SFAFirst(std::array<T,O>& prev) : NonV::StackableFunctor<T,N,std::array<T,O>>(prev) {}
+    using std::array<T,N>::array;
     virtual void operator()() const final {
-        std::cout << "Executing NonV::ROM..." << std::endl;
-        //modifyMe = true;
+        std::cout << "Loading NonV::StackableFunctor..." << std::endl;
     };
-    virtual std::size_t constexpr size() final {return O-1;}//size of Previous?
-    private:
-    bool modifyMe = false;
+    constexpr static std::size_t size() {return N;};
+    protected:
+    std::array<T,N> _input;
 };
 template<typename T, std::size_t N, std::size_t O=N> class Heap : public SFA::Strict<T,N,O> {
     public:
@@ -31,7 +29,7 @@ template<typename T, std::size_t N, std::size_t O=N> class Heap : public SFA::St
         std::cout << "Executing SFA::Strict..." << std::endl;
         //this->at(0)=T{};
     };
-    virtual std::size_t constexpr size() final {return O-2;}
+    virtual std::size_t constexpr size() final {return O-1;}
 };
 
 template<typename T> class FreeStore : public SFA::Lazy<T> {
@@ -41,7 +39,7 @@ template<typename T> class FreeStore : public SFA::Lazy<T> {
         std::cout << "Executing SFA::Lazy..." << std::endl;
         //this->push_back(T{});
     };
-    virtual std::size_t size() final {return SFA::Lazy<T>::_input.size()-2;};
+    virtual std::size_t size() final {return SFA::Lazy<T>::_input.size()-1;};
 };
 
 using data_type = int;
@@ -49,37 +47,39 @@ using data_type = int;
 template<typename InputBufferType, typename OutputBufferType> void STL::transform (
         typename InputBufferType::iterator inputStart,
         typename InputBufferType::iterator inputEnd,
+        typename OutputBufferType::iterator secondStart,
         typename OutputBufferType::iterator outputStart) {
-        std::cout << "Executing STL::function..." << std::endl;
-        std::transform(inputStart, inputEnd, outputStart,
-        [](typename InputBufferType::reference a){return typename OutputBufferType::value_type{};}
+        std::cout << "Executing STL::transform..." << std::endl;
+        std::transform(inputStart, inputEnd, secondStart, outputStart,
+        [](typename InputBufferType::reference a,typename InputBufferType::reference b){return typename OutputBufferType::value_type{};}
         );
 };
 
 int main()
 {
     const std::size_t input_length = 3;
-    auto inputArray = std::array<data_type, input_length>{};
-    std::cout<<"Size of inputArray "<<input_length<<std::endl;
-    auto nonv = SFAFirst<data_type, input_length-1, input_length>(inputArray);
-    auto nonv2 = SFAItem<data_type, input_length-2, decltype(nonv)>(nonv);
+    const int size_change = -1;
+    auto nonv1 = SFAFirst<data_type, input_length>{};
+    std::cout<<"Size of nonv1 "<<std::size(nonv1)<<std::endl;
+    auto nonv2 = SFAItem<data_type, decltype(nonv1), size_change>(nonv1);
     nonv2();
     std::cout<<"Size of nonv2 "<<nonv2.size()<<std::endl;
+    auto inputArray = std::array<data_type, input_length>{};
     std::cout<<"Size of inputArray "<<input_length<<std::endl;
-    auto strict = Heap<data_type, input_length-2, input_length>(inputArray);
+    auto strict = Heap<data_type, input_length+size_change, input_length>(inputArray);
     strict();
     std::cout<<"Size of strict "<<strict.size()<<std::endl;
     auto inputVector = std::vector<data_type>{};
-    inputVector.push_back(data_type{});
-    inputVector.push_back(data_type{});
-    inputVector.push_back(data_type{});
+    while(inputVector.size()!=input_length)
+    	inputVector.push_back(data_type{});
     std::cout<<"Size of inputVector "<<inputVector.size()<<std::endl;
     auto lazy = FreeStore<data_type>(inputVector);
     lazy();
     std::cout<<"Size of lazy "<<lazy.size()<<std::endl;
     auto outputBuffer = std::vector<data_type>{};
-    outputBuffer.push_back(data_type{});
+    while(outputBuffer.size()!=input_length+size_change)
+        outputBuffer.push_back(data_type{});
     std::cout<<"Size of inputVector "<<inputVector.size()<<std::endl;
-    STL::transform<decltype(inputVector),decltype(outputBuffer)>(inputVector.begin(),inputVector.end(),outputBuffer.begin());
+    STL::transform<decltype(inputVector),decltype(outputBuffer)>(inputVector.begin(),inputVector.end(),inputVector.begin()-size_change,outputBuffer.begin());
     std::cout<<"Size after STL::transform "<<outputBuffer.size()<<std::endl;
 }

@@ -5,9 +5,10 @@
 namespace STL {
     template<typename InputBufferType, typename OutputBufferType> void transform(//Refactoring 1
         typename InputBufferType::iterator inputStart,
-        typename InputBufferType::iterator InputEnd,
-        typename OutputBufferType::iterator OutputStart
-        );
+        typename InputBufferType::iterator inputEnd,
+        typename OutputBufferType::iterator secondStart,
+        typename OutputBufferType::iterator outputStart
+    );
 }
 namespace SFA {
     template<typename T> class Lazy : public std::vector<T> {//Refactoring 2
@@ -28,11 +29,11 @@ namespace SFA {
     };
 }
 namespace NonV {
-    template<typename T, std::size_t N, typename Previous> class StackableFunctor : public std::array<T,N> {//Refactoring 4
+    template<typename T, typename Previous, int SizeChange, size_t N=Previous::size()+SizeChange> class StackableFunctor : public std::array<T,N> {//Refactoring 4
         public:
         StackableFunctor(Previous& prev) : _input(prev), std::array<T,N>{} {}
         virtual void operator()() const=0;//nonstatic!
-        virtual std::size_t constexpr size() = 0;
+        constexpr static std::size_t size() {return N;};
         protected:
         Previous _input;
     };
