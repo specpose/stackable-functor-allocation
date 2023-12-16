@@ -16,20 +16,20 @@ template<typename T, std::size_t N> class SFAFirst : public std::array<T,N> {
     public:
     using std::array<T,N>::array;
     virtual void operator()() const final {
-        std::cout << "Loading NonV::StackableFunctor..." << std::endl;
+        std::cout << "Initialized NonV::Stack..." << std::endl;
     };
     constexpr static std::size_t size() {return N;};
     protected:
     std::array<T,N> _input;
 };
-template<typename T, std::size_t N, std::size_t O=N> class Heap : public SFA::Strict<T,N,O> {
+template<typename T, std::size_t PreviousSize, int SizeChange=0> class Heap : public SFA::Strict<T,PreviousSize,PreviousSize+SizeChange> {
     public:
-    Heap(const std::array<T,O>& inputBufferCopy) : SFA::Strict<T,N,O>(inputBufferCopy) {}
+    Heap(const std::array<T,PreviousSize>& inputBufferCopy) : SFA::Strict<T,PreviousSize,PreviousSize+SizeChange>(inputBufferCopy) {}
     virtual void operator()() const final {
         std::cout << "Executing SFA::Strict..." << std::endl;
         //this->at(0)=T{};
     };
-    virtual std::size_t constexpr size() final {return O-1;}
+    virtual std::size_t constexpr size() final {return PreviousSize-1;}
 };
 
 template<typename T> class FreeStore : public SFA::Lazy<T> {
@@ -66,7 +66,7 @@ int main()
     std::cout<<"Size of nonv2 "<<nonv2.size()<<std::endl;
     auto inputArray = std::array<data_type, input_length>{};
     std::cout<<"Size of inputArray "<<input_length<<std::endl;
-    auto strict = Heap<data_type, input_length+size_change, input_length>(inputArray);
+    auto strict = Heap<data_type, input_length, size_change>(inputArray);
     strict();
     std::cout<<"Size of strict "<<strict.size()<<std::endl;
     auto inputVector = std::vector<data_type>{};

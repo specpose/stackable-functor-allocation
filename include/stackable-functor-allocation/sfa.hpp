@@ -19,13 +19,13 @@ namespace SFA {
         protected:
         std::vector<T> _input;
     };
-    template<typename T, std::size_t N, std::size_t O=N> class Strict : public std::array<T,N> {//Refactoring 3
+    template<typename T, std::size_t PreviousSize, int SizeChange> class Strict : public std::array<T,PreviousSize+SizeChange> {//Refactoring 3
         public:
-        Strict(const std::array<T,O>& inputBuffer) : _input(inputBuffer), std::array<T,N>{} {}
+        Strict(const std::array<T,PreviousSize>& inputBuffer) : _input(inputBuffer), std::array<T,PreviousSize+SizeChange>{} {}
         virtual void operator()() const=0;//nonstatic!
 	virtual std::size_t constexpr size() = 0;
         protected:
-        std::array<T,O> _input;
+        std::array<T,PreviousSize> _input;
     };
 }
 namespace NonV {
