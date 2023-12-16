@@ -5,11 +5,11 @@ template<typename T, std::size_t N, typename Previous> class SFAItem : public No
     public:
     SFAItem(Previous& prev) : NonV::StackableFunctor<T,N,Previous>(prev) {}
     virtual void operator()() const final {
-        NonV::StackableFunctor<T,N,Previous>::_previous();
+        NonV::StackableFunctor<T,N,Previous>::_input();
         std::cout << "Executing NonV::ROM..." << std::endl;
         //modifyMe = true;
     };
-    virtual std::size_t constexpr size() final {return NonV::StackableFunctor<T,N,Previous>::_previous.size()-1;}//size of Previous?
+    virtual std::size_t constexpr size() final {return NonV::StackableFunctor<T,N,Previous>::_input.size()-1;}//size of Previous?
     private:
     bool modifyMe = false;
 };
@@ -24,9 +24,9 @@ template<typename T, std::size_t N, std::size_t O> class SFAFirst : public NonV:
     private:
     bool modifyMe = false;
 };
-template<typename T, std::size_t N, std::size_t O=N> class Buffer : public SFA::Strict<T,N,O> {
+template<typename T, std::size_t N, std::size_t O=N> class Heap : public SFA::Strict<T,N,O> {
     public:
-    Buffer(const std::array<T,O>& inputBufferCopy) : SFA::Strict<T,N,O>(inputBufferCopy) {}
+    Heap(const std::array<T,O>& inputBufferCopy) : SFA::Strict<T,N,O>(inputBufferCopy) {}
     virtual void operator()() const final {
         std::cout << "Executing SFA::Strict..." << std::endl;
         //this->at(0)=T{};
@@ -66,7 +66,7 @@ int main()
     nonv2();
     std::cout<<"Size of nonv2 "<<nonv2.size()<<std::endl;
     std::cout<<"Size of inputArray "<<input_length<<std::endl;
-    auto strict = Buffer<data_type, input_length-2, input_length>(inputArray);
+    auto strict = Heap<data_type, input_length-2, input_length>(inputArray);
     strict();
     std::cout<<"Size of strict "<<strict.size()<<std::endl;
     auto inputVector = std::vector<data_type>{};

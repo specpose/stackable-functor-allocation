@@ -30,10 +30,10 @@ namespace SFA {
 namespace NonV {
     template<typename T, std::size_t N, typename Previous> class StackableFunctor : public std::array<T,N> {//Refactoring 4
         public:
-        StackableFunctor(Previous& prev) : _previous(prev), std::array<T,N>{} {}
+        StackableFunctor(Previous& prev) : _input(prev), std::array<T,N>{} {}
         virtual void operator()() const=0;//nonstatic!
         virtual std::size_t constexpr size() = 0;
         protected:
-        Previous& _previous;
+        Previous _input;
     };
 }
