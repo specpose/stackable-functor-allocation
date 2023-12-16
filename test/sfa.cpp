@@ -1,26 +1,14 @@
 #include "stackable-functor-allocation/sfa.hpp"
 #include <iostream>
 
-/*template<typename T, std::size_t N, std::size_t O=N> class ROMTest : public NonV::ROM<T,N,O> {
+template<typename T, std::size_t N, typename Previous> class SFATest : public NonV::StackableFunctor<T,N,Previous> {
     public:
-    ROMTest(const NonV::RAM<T,N,O>& inputBufferRef) : NonV::ROM<T,N,O>(inputBufferRef) {}
+    SFATest(Previous& prev) : NonV::StackableFunctor<T,N,Previous>(prev) {}
     virtual void operator()() const final {
         std::cout << "Executing NonV::ROM..." << std::endl;
         //modifyMe = true;
     };
-    private:
-    bool modifyMe = false;
-};*/
-template<typename T, std::size_t N, std::size_t O=N> class SFATest : public NonV::StackableFunctor<T,N,O> {
-    public:
-    SFATest() : _input(std::array<T,O>{}), NonV::StackableFunctor<T,N,O>() {}
-    virtual void operator()() const final {
-        std::cout << "Executing NonV::ROM..." << std::endl;
-        //modifyMe = true;
-    };
-    virtual std::size_t constexpr size() final {return O-1;}
-    protected:
-    std::array<T,O> _input;
+    virtual std::size_t constexpr size() final {return 2-1;}//size of Previous?
     private:
     bool modifyMe = false;
 };
@@ -59,12 +47,9 @@ template<typename InputBufferType, typename OutputBufferType> void STL::transfor
 int main()
 {
     const std::size_t input_length = 2;
-    auto nonv = SFATest<data_type, input_length>();
-    nonv();
     auto inputArray = std::array<data_type, input_length>{};
-    //auto inputBuffer = NonV::RAM<data_type, input_length-1, input_length>(inputArray);
-    //auto nonv = ROMTest<data_type, input_length-1, input_length>(inputBuffer);
-    //nonv();
+    auto nonv = SFATest<data_type, input_length, decltype(inputArray)>(inputArray);
+    nonv();
     auto strict = Buffer<data_type, input_length>(inputArray);
     strict();
     auto inputVector = std::vector<data_type>{};

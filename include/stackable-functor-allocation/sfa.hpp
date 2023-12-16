@@ -2,23 +2,13 @@
 #include <array>
 #include <vector>
 #include <functional>
-
-/*namespace NonV {
-    template<typename T, std::size_t N, std::size_t O=N> struct RAM : public std::array<T,N> {
-        public:
-        RAM(const std::array<T,O>& inputBuffer) : input(inputBuffer), std::array<T,N>{} {}
-        public:
-        const std::array<T,O>& input;
-    };
-    template<typename T, std::size_t N, std::size_t O=N> class ROM {
-        public:
-        ROM(const RAM<T,N,O>& ioBuffer) : _input(ioBuffer) {}
-        virtual void operator()() const=0;
-        protected:
-        const RAM<T,N,O>& _input;
-    };
-    //template<std::size_t M, > struct Stack : public std::array<ROM<>&,N> {};
-}*/
+namespace STL {
+    template<typename InputBufferType, typename OutputBufferType> void transform(
+        typename InputBufferType::iterator inputStart,
+        typename InputBufferType::iterator InputEnd,
+        typename OutputBufferType::iterator OutputStart
+        );
+}
 namespace SFA {
     template<typename T, std::size_t N, std::size_t O=N> class Strict : public std::array<T,N> {
         public:
@@ -37,20 +27,13 @@ namespace SFA {
         std::vector<T> _input;
     };
 }
-namespace STL {
-    template<typename InputBufferType, typename OutputBufferType> void transform(
-        typename InputBufferType::iterator inputStart,
-        typename InputBufferType::iterator InputEnd,
-        typename OutputBufferType::iterator OutputStart
-        );
-}
 namespace NonV {
-    //struct Stack : std::forward_list<SFA::Strict<T,N>&> {};
-    template<typename T, std::size_t N, std::size_t O=N> class StackableFunctor : public virtual std::array<T,N> {
+    template<typename T, std::size_t N, typename Previous> class StackableFunctor : public virtual std::array<T,N> {
         public:
-        StackableFunctor() : std::array<T,N>{} {}
+        StackableFunctor(Previous& prev) : _previous(prev), std::array<T,N>{} {}
         virtual void operator()() const=0;//nonstatic
-        void process() {operator()();};
         virtual std::size_t constexpr size() = 0;
+        protected:
+        Previous& _previous;
     };
 }
