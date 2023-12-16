@@ -82,6 +82,6 @@ int main()
     while(outputVector.size()!=input_length+size_change)
         outputVector.push_back(data_type{});
     std::cout<<"Size of inputVector "<<inputVector.size()<<std::endl;
-    STL::transform<decltype(inputVector),decltype(outputVector)>(inputVector.begin(),inputVector.end(),inputVector.begin()-size_change,outputVector.begin());
+    STL::transform<decltype(inputVector),decltype(outputVector)>(inputVector.begin(),inputVector.end()+size_change,inputVector.begin()-size_change,outputVector.begin());
     std::cout<<"Size of outputVector "<<outputVector.size()<<std::endl;
 }
