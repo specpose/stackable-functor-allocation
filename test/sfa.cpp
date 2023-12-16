@@ -19,8 +19,6 @@ template<typename T, std::size_t N> class SFAFirst : public std::array<T,N> {
         std::cout << "Initialized NonV::Stack..." << std::endl;
     };
     constexpr static std::size_t size() {return N;};
-    protected:
-    std::array<T,N> _input;
 };
 template<typename T, std::size_t PreviousSize, int SizeChange=0> class Heap : public SFA::Strict<T,PreviousSize,PreviousSize+SizeChange> {
     public:
