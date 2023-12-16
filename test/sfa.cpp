@@ -59,16 +59,19 @@ int main()
 {
     const std::size_t input_length = 3;
     const int size_change = -1;
+    std::cout<<"//Refactoring 4"<<std::endl;
     auto nonv1 = SFAFirst<data_type, input_length>{};
     std::cout<<"Size of nonv1 "<<std::size(nonv1)<<std::endl;
     auto nonv2 = SFAItem<data_type, decltype(nonv1), size_change>(nonv1);
     nonv2();
     std::cout<<"Size of nonv2 "<<nonv2.size()<<std::endl;
+    std::cout<<"//Refactoring 3"<<std::endl;
     auto inputArray = std::array<data_type, input_length>{};
     std::cout<<"Size of inputArray "<<input_length<<std::endl;
     auto strict = Heap<data_type, input_length, size_change>(inputArray);
     strict();
     std::cout<<"Size of strict "<<strict.size()<<std::endl;
+    std::cout<<"//Refactoring 2"<<std::endl;
     auto inputVector = std::vector<data_type>{};
     while(inputVector.size()!=input_length)
     	inputVector.push_back(data_type{});
@@ -76,10 +79,11 @@ int main()
     auto lazy = FreeStore<data_type>(inputVector);
     lazy();
     std::cout<<"Size of lazy "<<lazy.size()<<std::endl;
-    auto outputBuffer = std::vector<data_type>{};
-    while(outputBuffer.size()!=input_length+size_change)
-        outputBuffer.push_back(data_type{});
+    std::cout<<"//Refactoring 1"<<std::endl;
+    auto outputVector = std::vector<data_type>{};
+    while(outputVector.size()!=input_length+size_change)
+        outputVector.push_back(data_type{});
     std::cout<<"Size of inputVector "<<inputVector.size()<<std::endl;
-    STL::transform<decltype(inputVector),decltype(outputBuffer)>(inputVector.begin(),inputVector.end(),inputVector.begin()-size_change,outputBuffer.begin());
-    std::cout<<"Size after STL::transform "<<outputBuffer.size()<<std::endl;
+    STL::transform<decltype(inputVector),decltype(outputVector)>(inputVector.begin(),inputVector.end(),inputVector.begin()-size_change,outputVector.begin());
+    std::cout<<"Size of outputVector "<<outputVector.size()<<std::endl;
 }
