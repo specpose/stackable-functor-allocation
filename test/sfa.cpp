@@ -1,4 +1,5 @@
 #include "stackable-functor-allocation/sfa.hpp"
+#include <algorithm>
 #include <iostream>
 
 template<typename T, typename Previous, int SizeChange=0> class SFAItem : public NonV::StackableFunctor<T,Previous,SizeChange> {
