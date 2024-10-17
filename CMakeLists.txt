@@ -4,9 +4,12 @@ set(CMAKE_CXX_STANDARD 17)
 
 project(stackable-functor-allocation)
 
-add_executable(test_Interface)
-target_include_directories(test_Interface PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
-target_sources(test_Interface PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test/sfa.cpp)
+add_executable(test_SFA)
+target_include_directories(test_SFA PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+target_sources(test_SFA PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test/sfa.cpp)
+add_executable(test_INV)
+target_include_directories(test_INV PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+target_sources(test_INV PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test/invertable.cpp)
 
 add_library(${PROJECT_NAME} INTERFACE)
 target_sources(${PROJECT_NAME}
