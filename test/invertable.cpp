@@ -4,42 +4,44 @@
 
 namespace INV {
     template<typename output_t> struct ParameterPack {//output_t: C++
-        using T = output_t;//T: Python
+        using input_t = output_t;//input_t: Python
         ParameterPack() {}
-        virtual void operator()() const = 0;
-        virtual void inverse() const = 0;
-        virtual std::size_t size() = 0;
-        std::vector<output_t>* _output = nullptr;
-        const std::vector<T>* _input;
-        const ParameterPack* _params;
+        const std::vector<output_t>* _output = nullptr;
+        const std::vector<input_t>* _input = nullptr;
     };
-    template<typename PPack_t> using PPack_operators
-        = std::tuple< void(PPack_t::*)(), void(PPack_t::*)() >;
-}
-namespace INVFirst {
-    template<typename output_t> struct Adjacent_differences : public INV::ParameterPack<output_t> {
-        Adjacent_differences() {}
-        void operator()() const { std::cout << "Hello" << std::endl; }
-        void inverse() const { std::cout << "Ola! I took the first item of your inputBuffer." << std::endl; }
-        std::size_t size() { return _input->size() - 1; }
+    template<typename output_t> struct Invertable {
+        Invertable() {}
+        static void forward(ParameterPack<output_t>&) = delete;
+        static void inverse(ParameterPack<output_t>&) = delete;
+        static std::size_t size(ParameterPack<output_t>&) = delete;
     };
-    //template<data_type> void Adjacent_differences::operator()(Adjacent_differences<data_type>& _params) {};
-    //template<data_type> void Adjacent_differences::inverse(Adjacent_differences<data_type>& _params) {};
-    template<typename output_t> using Adjacent_differences_ops = INV::PPack_operators<Adjacent_differences<typename output_t>>;
 }
+template<typename output_t> struct Adjacent_differences_PP : public INV::ParameterPack<output_t> { std::string name{ "Chico" }; };
+template<typename output_t> struct Adjacent_differences : public INV::Invertable<output_t> {
+    Adjacent_differences() {}
+    static void forward(Adjacent_differences_PP<output_t>& pack) { std::cout << "Hello" << std::endl; }
+    static void inverse(Adjacent_differences_PP<output_t>& pack) { std::cout << "Ola! "<<pack.name<<" I took the first item of your inputBuffer." << std::endl; }
+    static std::size_t size(Adjacent_differences_PP<output_t>& pack) {
+        if (pack._input)
+            return pack._input->size() - 1;
+        else
+            throw std::logic_error("Forgot to initialize Adj_t parameter pack");
+    }
+};
 
 int main()
 {
     using data_type = int;
-    std::tuple<INVFirst::Adjacent_differences<data_type>> parameters{};//SHM
-    std::tuple<INVFirst::Adjacent_differences_ops<data_type>> stackable{};
+    std::tuple<Adjacent_differences_PP<data_type>> parameters{};//SHM
+    std::tuple<Adjacent_differences<data_type>> stackable{};//kernel stack
     const std::size_t input_length = 3;
-    /*auto inputVector = std::vector<data_type>(input_length);
-    auto outputVector = std::vector<data_type>(firstFunction.size());
-    firstFunction._output = &outputVector;*/
+    auto inputVector = std::vector<data_type>(input_length);
+    std::get<0>(parameters)._input = &inputVector;
+    auto outputVector = std::vector<data_type>(std::get<0>(stackable).size(std::get<0>(parameters)));
+    std::get<0>(parameters)._output = &outputVector;
 
     //GPU start
-    //std::get<0>(std::get<0>(stackable))(std::get<0>(parameters));
-    //std::get<1>(std::get<0>(stackable))(std::get<0>(parameters));
+    std::get<0>(stackable).forward(std::get<0>(parameters));
+    std::get<0>(stackable).inverse(std::get<0>(parameters));
     //GPU end
 }
