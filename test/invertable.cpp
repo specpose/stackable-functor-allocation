@@ -6,6 +6,7 @@ namespace INV {
     template<typename output_t> struct ParameterPack {//output_t: C++
         using input_t = output_t;//input_t: Python
         ParameterPack() {}
+        ~ParameterPack() { _input = nullptr; _output = nullptr; }
         const std::vector<output_t>* _output = nullptr;
         const std::vector<input_t>* _input = nullptr;
     };
@@ -18,7 +19,7 @@ namespace INV {
 }
 template<typename output_t> struct Adjacent_differences_PP : public INV::ParameterPack<output_t> { std::string name{ "Chico" }; };
 template<typename output_t> struct Adjacent_differences : public INV::Invertable<output_t> {
-    Adjacent_differences() {}
+    Adjacent_differences() : INV::Invertable<output_t>{} {}
     static void forward(Adjacent_differences_PP<output_t>& pack) { std::cout << "Hello" << std::endl; }
     static void inverse(Adjacent_differences_PP<output_t>& pack) { std::cout << "Ola! "<<pack.name<<" I took the first item of your inputBuffer." << std::endl; }
     static std::size_t size(Adjacent_differences_PP<output_t>& pack) {
@@ -41,7 +42,7 @@ int main()
     std::get<0>(parameters)._output = &outputVector;
 
     //GPU start
-    std::get<0>(stackable).forward(std::get<0>(parameters));
-    std::get<0>(stackable).inverse(std::get<0>(parameters));
+    std::get<0>(stackable).forward(std::get<0>(parameters));//par::unseq
+    std::get<0>(stackable).inverse(std::get<0>(parameters));//par::seq => par::unseq if input available
     //GPU end
 }

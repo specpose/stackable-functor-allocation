@@ -71,17 +71,13 @@ int main()
     strict();
     std::cout<<"Size of strict "<<strict.size()<<std::endl;
     std::cout<<"//Refactoring 2"<<std::endl;
-    auto inputVector = std::vector<data_type>{};
-    while(inputVector.size()!=input_length)
-    	inputVector.push_back(data_type{});
+    auto inputVector = std::vector<data_type>(input_length);
     std::cout<<"Size of inputVector "<<inputVector.size()<<std::endl;
     auto lazy = FreeStore<data_type>(inputVector);
     lazy();
     std::cout<<"Size of lazy "<<lazy.size()<<std::endl;
     std::cout<<"//Refactoring 1"<<std::endl;
-    auto outputVector = std::vector<data_type>{};
-    while(outputVector.size()!=input_length+size_change)
-        outputVector.push_back(data_type{});
+    auto outputVector = std::vector<data_type>(input_length + size_change);
     std::cout<<"Size of inputVector "<<inputVector.size()<<std::endl;
     STL::transform<decltype(inputVector),decltype(outputVector)>(inputVector.begin(),inputVector.end()+size_change,inputVector.begin()-size_change,outputVector.begin());
     std::cout<<"Size of outputVector "<<outputVector.size()<<std::endl;
