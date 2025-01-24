@@ -27,7 +27,7 @@ template<typename container_t> struct Adjacent_differences : public Invertible<c
 };
 template<typename container_t> struct Amplify : public Invertible<container_t> {
     Amplify() : Invertible<container_t>{} {}
-    Amplify(typename container_t::value_type factor) : Amplify{}, factor(factor) {}
+    Amplify(typename container_t::value_type factor) : factor(factor) {}
     virtual void forward(container_t& input, container_t& output) {
         std::transform(input.begin(), input.end(), output.begin(), [&](auto in) { return factor * in; });
     }
@@ -46,7 +46,7 @@ std::ostream& operator<<(std::ostream& os, const buffer_type& vec) {
 }
 int main() {
 	std::tuple<buffer_type, buffer_type, buffer_type> nodes{};
-	std::tuple<Adjacent_differences<buffer_type>,Amplify<buffer_type>> edges{};
+    std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges( {},{2} );
     std::get<0>(nodes) = buffer_type{ 1,0,1,0,-1,2,3,1,0,-1,-3,-5 };
     std::cout << "Original: " << std::get<0>(nodes) << std::endl;
     std::get<1>(nodes) = buffer_type(Adjacent_differences<buffer_type>::size(std::get<0>(nodes)));
@@ -54,6 +54,7 @@ int main() {
     std::get<0>(edges).forward(std::get<0>(nodes), std::get<1>(nodes));
     std::for_each(std::get<0>(nodes).begin(), std::get<0>(nodes).end(), [](data_type& e) { e = 0; });
     std::get<1>(edges).forward(std::get<1>(nodes), std::get<2>(nodes));
+    std::get<1>(edges).factor = 1;
     std::get<1>(edges).inverse(std::get<1>(nodes), std::get<2>(nodes));
     std::get<0>(edges).inverse(std::get<0>(nodes), std::get<1>(nodes));
     std::cout << "Reverted: " << std::get<0>(nodes) << std::endl;
