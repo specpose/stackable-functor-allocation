@@ -38,3 +38,19 @@ namespace NonV {
         Previous _input;
     };
 }
+
+namespace INV {
+    template<typename output_t> struct ParameterPack {//output_t: C++
+        using input_t = output_t;//input_t: Python
+        ParameterPack() {}
+        ~ParameterPack() { _input = nullptr; _output = nullptr; }
+        const std::vector<output_t>* _output = nullptr;
+        const std::vector<input_t>* _input = nullptr;
+    };
+    template<typename output_t> struct Invertable {
+        Invertable() {}
+        static void forward(ParameterPack<output_t>&) = delete;
+        static void inverse(ParameterPack<output_t>&) = delete;
+        static std::size_t size(ParameterPack<output_t>&) = delete;
+    };
+}
