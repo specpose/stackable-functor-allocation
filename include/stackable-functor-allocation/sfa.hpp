@@ -27,6 +27,10 @@ namespace SFA {
         protected:
         std::array<T,PreviousSize> _input;
     };
+    template<typename container_t> struct functor_traits {//output_t: C++
+        using output_t = typename container_t::value_type;
+        using input_t = output_t;//input_t: Python
+    };
 }
 namespace NonV {
     template<typename T, typename Previous, int SizeChange, size_t N=Previous::size()+SizeChange> class StackableFunctor : public std::array<T,N> {//Refactoring 4
@@ -40,17 +44,16 @@ namespace NonV {
 }
 
 namespace INV {
-    template<typename output_t> struct ParameterPack {//output_t: C++
-        using input_t = output_t;//input_t: Python
+    template<typename container_t> struct ParameterPack : public SFA::functor_traits<container_t> {
         ParameterPack() {}
         ~ParameterPack() { _input = nullptr; _output = nullptr; }
-        const std::vector<output_t>* _output = nullptr;
-        const std::vector<input_t>* _input = nullptr;
+        container_t* _output = nullptr;
+        container_t* _input = nullptr;
     };
-    template<typename output_t> struct Invertable {
+    template<typename container_t> struct Invertable {
         Invertable() {}
-        static void forward(ParameterPack<output_t>&) = delete;
-        static void inverse(ParameterPack<output_t>&) = delete;
-        static std::size_t size(ParameterPack<output_t>&) = delete;
+        static void forward(ParameterPack<container_t>&) = delete;
+        static void inverse(ParameterPack<container_t>&) = delete;
+        static std::size_t size(const ParameterPack<container_t>&) = delete;
     };
 }

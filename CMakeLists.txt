@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.23)
 
 set(CMAKE_CXX_STANDARD 17)
 
-project(stackable-functor-allocation)
+project(stackable-functor-allocation LANGUAGES CXX)
 
 option(SFA_BACKEND "CPU")
 
@@ -11,10 +11,11 @@ target_include_directories(test_SFA PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/
 target_sources(test_SFA PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test/sfa.cpp)
 add_executable(test_INV)
 if (SFA_BACKEND STREQUAL "GOOPAX")
-  find_package(goopax REQUIRED PATHS ..)
-  target_compile_definitions(test_INV PRIVATE goopax=1)
+  find_package(goopax REQUIRED PATHS ../)
+  target_compile_definitions(test_INV PRIVATE GOOPAX=1)
   target_link_libraries(test_INV PRIVATE goopax::goopax)
 endif()
+message("Backend is ${SFA_BACKEND}")
 target_include_directories(test_INV PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
 target_sources(test_INV PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test/invertable.cpp)
 
