@@ -80,7 +80,9 @@ int main()
     std::get<1>(parameters)._output = &outputVector2;
 
     std::get<0>(stackable).forward(std::get<0>(parameters));//par::unseq
+#ifndef GOOPAX
     std::for_each(inputVector.begin(), inputVector.end(), [](data_type& e) { e = 0; });
+#endif
     //GPU start
     std::get<1>(stackable).forward(std::get<1>(parameters));
     std::get<1>(stackable).inverse(std::get<1>(parameters));

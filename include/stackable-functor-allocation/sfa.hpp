@@ -27,10 +27,6 @@ namespace SFA {
         protected:
         std::array<T,PreviousSize> _input;
     };
-    template<typename container_t> struct functor_traits {//output_t: C++
-        using output_t = typename container_t::value_type;
-        using input_t = output_t;//input_t: Python
-    };
 }
 namespace NonV {
     template<typename T, typename Previous, int SizeChange, size_t N=Previous::size()+SizeChange> class StackableFunctor : public std::array<T,N> {//Refactoring 4
@@ -44,7 +40,7 @@ namespace NonV {
 }
 
 namespace INV {
-    template<typename container_t> struct ParameterPack : public SFA::functor_traits<container_t> {
+    template<typename container_t> struct ParameterPack {
         ParameterPack() {}
         ~ParameterPack() { _input = nullptr; _output = nullptr; }
         container_t* _output = nullptr;
