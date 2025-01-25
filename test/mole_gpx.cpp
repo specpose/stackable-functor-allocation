@@ -1,30 +1,31 @@
 #include "stackable-functor-allocation/mole.hpp"
-#include <tuple>
 #include <goopax>
+#include <goopax_extra/struct_types.hpp>
 #include <iostream>
 using data_type = int;
 using buffer_type = goopax::buffer<data_type>;
 using resource_type = goopax::resource<data_type>;
 template<> struct Adjacent_differences<buffer_type> {
-    Adjacent_differences(goopax::goopax_device& device) : first_value(device, 1) {
+    std::tuple<data_type> params{ 0 };
+    Adjacent_differences(goopax::goopax_device& device) : params_buf(device, 1) {
         forward.assign(device, [this](goopax::resource<data_type>& input, goopax::resource<data_type>& output) {
-            goopax::resource<data_type> v1(this->first_value);
+            goopax::resource<decltype(params)> v1(params_buf);
             _forward(input,output,v1);
             });
         inverse.assign(device, [this](goopax::resource<data_type>& input, goopax::resource<data_type>& output) {
-            goopax::resource<data_type> v1(this->first_value);
+            goopax::resource<decltype(params)> v1(params_buf);
             _inverse(input,output,v1);
             });
     }
     goopax::kernel<void(goopax::buffer<data_type>&, goopax::buffer<data_type>&)> forward;
-    static void _forward(resource_type& input, resource_type& output, goopax::resource<data_type>& _first_value) {
+    static void _forward(resource_type& input, resource_type& output, goopax::resource<decltype(params)>& p) {
         //first_value = input[0];
         //goopax::gpu_for_group(1, input.size() - 1, [&](goopax::gpu_uint pos) {output[pos - 1] = input[pos] - input[pos - 1]; });
         /*for (std::size_t i = 1; i < input.size(); i++)
             output.at(i - 1) = input.at(i) - input.at(i - 1);*/
     }
     goopax::kernel<void(goopax::buffer<data_type>&, goopax::buffer<data_type>&)> inverse;
-    static void _inverse(resource_type& input, resource_type& output, goopax::resource<data_type>& _first_value) {
+    static void _inverse(resource_type& input, resource_type& output, goopax::resource<decltype(params)>& p) {
         //input[0] = first_value;
         //input[0] = 1;
         //goopax::gpu_for_group(0, output.size() - 1, [&](goopax::gpu_uint pos) {input[pos + 1] = input[pos] + output[pos]; });
@@ -32,30 +33,31 @@ template<> struct Adjacent_differences<buffer_type> {
             input.at(i + 1) = input.at(i) + output.at(i);*/
     }
     static std::size_t size(const buffer_type& input) { return input.size() - 1; }
-    goopax::buffer<data_type> first_value;
+    goopax::buffer<decltype(params)> params_buf;
 };
 template<> struct Amplify<buffer_type> {
-    Amplify(goopax::goopax_device& device, int s) : factor(device, 1){
-        factor.fill(s);
+    std::tuple<data_type> params{ 0 };
+    Amplify(goopax::goopax_device& device, int s) : params_buf(device, 1) {
+        params_buf.fill({ s });
         forward.assign(device, [this](goopax::resource<data_type>& input, goopax::resource<data_type>& output) {
-            goopax::resource<int> p1(this->factor);
+            goopax::resource<decltype(params)> p1(params_buf);
             _forward(input, output, p1);
             });
         inverse.assign(device, [this](goopax::resource<data_type>& input, goopax::resource<data_type>& output) {
-            goopax::resource<int> p1(this->factor);
+            goopax::resource<decltype(params)> p1(params_buf);
             _inverse(input, output, p1);
             });
     }
     goopax::kernel<void(goopax::buffer<data_type>&, goopax::buffer<data_type>&)> forward;
-    static void _forward(resource_type& input, resource_type& output, goopax::resource<int>& _factor) {
+    static void _forward(resource_type& input, resource_type& output, goopax::resource<decltype(params)>& p) {
         //std::transform(input.begin(), input.end(), output.begin(), [&](auto in) { return factor * in; });
     }
     goopax::kernel<void(goopax::buffer<data_type>&, goopax::buffer<data_type>&)> inverse;
-    static void _inverse(resource_type& input, resource_type& output, goopax::resource<int>& _factor) {
+    static void _inverse(resource_type& input, resource_type& output, goopax::resource<decltype(params)>& p) {
         //std::transform(output.begin(), output.end(), input.begin(), [&](auto out) { return out / factor; });
     }
     static std::size_t size(const buffer_type& input) { return input.size(); }
-    goopax::buffer<int> factor;
+    goopax::buffer<decltype(params)> params_buf;
 };
 std::ostream& operator<<(std::ostream& os, const buffer_type& _vec) {
     auto vec = _vec.to_vector();
