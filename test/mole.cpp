@@ -18,7 +18,7 @@ int main() {
     std::get<1>(nodes) = buffer_type(Adjacent_differences<buffer_type>::size(std::get<0>(nodes)));
     std::get<2>(nodes) = buffer_type(Amplify<buffer_type>::size(std::get<1>(nodes)));
     std::get<0>(edges).forward(std::get<0>(nodes), std::get<1>(nodes));
-    std::for_each(std::get<0>(nodes).begin(), std::get<0>(nodes).end(), [](data_type& e) { e = 0; });
+    std::fill(std::get<0>(nodes).begin(), std::get<0>(nodes).end(), 0);
     std::get<1>(edges).forward(std::get<1>(nodes), std::get<2>(nodes));
     std::get<1>(edges).factor = 1;
     std::get<1>(edges).inverse(std::get<1>(nodes), std::get<2>(nodes));
