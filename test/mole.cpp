@@ -11,8 +11,8 @@ std::ostream& operator<<(std::ostream& os, const buffer_type& vec) {
     return os;
 }
 int main() {
-	std::tuple<buffer_type, buffer_type, buffer_type> nodes{};
-    std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges( {},{2} );
+    std::tuple<buffer_type, buffer_type, buffer_type> nodes{ buffer_type{},buffer_type{},buffer_type{} };
+    std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges{ Adjacent_differences<buffer_type>(), Amplify<buffer_type>(2) };
     std::get<0>(nodes) = buffer_type{ 1,0,1,0,-1,2,3,1,0,-1,-3,-5 };
     std::cout << "Original: " << std::get<0>(nodes) << std::endl;
     std::get<1>(nodes) = buffer_type(Adjacent_differences<buffer_type>::size(std::get<0>(nodes)));
