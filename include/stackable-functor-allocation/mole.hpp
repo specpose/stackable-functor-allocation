@@ -1,4 +1,5 @@
 #include<tuple>
+#include<algorithm>
 //Use n nodes and n-1 bidirectional edges => Not SFA!
 namespace MOLE {
     template<typename container_t> struct Invertible {

@@ -1,7 +1,5 @@
 #include "stackable-functor-allocation/mole.hpp"
-#include <tuple>
 #include <vector>
-#include <algorithm>
 #include <iostream>
 using data_type = int;
 using buffer_type = std::vector<data_type>;
