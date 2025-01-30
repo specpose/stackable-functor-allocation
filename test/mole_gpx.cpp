@@ -40,7 +40,8 @@ template<> struct Adjacent_differences<buffer_type> {
 template<> struct Amplify<buffer_type> {
     goopax::buffer<params_type> params{};
     Amplify(goopax::goopax_device& device, int s) : params(device, 1) {
-        params = { params_type{s} };
+        const std::vector<params_type> myParams{ { s } };
+        params = std::move(myParams);
         forward.assign(device, [this](goopax::resource<data_type>& input, goopax::resource<data_type>& output) {
             goopax::resource<params_type> v{ params };
             return _forward(input, output, v);
@@ -71,7 +72,8 @@ int main() {
     auto device = goopax::default_device(goopax::env_CPU);
     std::tuple<buffer_type, buffer_type, buffer_type> nodes{ buffer_type{},buffer_type{},buffer_type{} };
     std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges{ Adjacent_differences<buffer_type>(device), Amplify<buffer_type>(device,2) };
-    std::get<0>(nodes) = buffer_type{device, {1,0,1,0,-1,2,3,1,0,-1,-3,-5}};
+    std::vector<data_type> inputBuffer{ 1,0,1,0,-1,2,3,1,0,-1,-3,-5 };
+    std::get<0>(nodes) = buffer_type{device, std::move(inputBuffer) };
     std::cout << "Original: " << std::get<0>(nodes) << std::endl;
     std::get<1>(nodes) = buffer_type( device, Adjacent_differences<buffer_type>::size(std::get<0>(nodes)));
     std::get<2>(nodes) = buffer_type( device, Amplify<buffer_type>::size(std::get<1>(nodes)));
@@ -81,11 +83,12 @@ int main() {
     std::get<1>(edges).forward(std::get<1>(nodes), std::get<2>(nodes));
 
     //sync to GPU
-    std::vector<params_type> factor{ params_type{27} };
-    std::get<1>(edges).params = std::move(factor) ;
-    //std::cout << "Amplification factor after move assignment: " << std::get<0>(factor.front()) << std::endl;
-    //std::get<1>(edges).params.copy_to_host(&std::get<1>(edges).params);
-    std::cout << "Setting signal amplification factor to: " << std::get<0>(std::get<1>(edges).params.to_vector().front()) << std::endl;
+    const params_type factor{ 1 };
+    std::cout << "Amplification factor before move assignment: " << std::get<0>(factor) << std::endl;
+    std::get<1>(edges).params.copy_from_host(&factor);
+    params_type newfactor{ 99 };
+    std::get<1>(edges).params.copy_to_host(&newfactor);
+    std::cout << "Amplification factor after issuing GPU sync: " << std::get<0>(newfactor) << std::endl;
 
     std::get<1>(edges).inverse(std::get<1>(nodes), std::get<2>(nodes));
     std::get<0>(edges).inverse(std::get<0>(nodes), std::get<1>(nodes));
