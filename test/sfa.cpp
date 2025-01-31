@@ -28,7 +28,6 @@ template<typename T, std::size_t PreviousSize, int SizeChange=0> class Heap : pu
         std::cout << "Executing SFA::Strict..." << std::endl;
         //this->at(0)=T{};
     };
-    virtual std::size_t constexpr size() final {return PreviousSize-1;}
 };
 
 template<typename T> class FreeStore : public SFA::Lazy<T> {
@@ -38,7 +37,7 @@ template<typename T> class FreeStore : public SFA::Lazy<T> {
         std::cout << "Executing SFA::Lazy..." << std::endl;
         //this->push_back(T{});
     };
-    virtual std::size_t size() final {return SFA::Lazy<T>::_input.size()-1;};
+    virtual std::size_t size() override {return SFA::Lazy<T>::_input.size()-1;};
 };
 
 using data_type = int;
