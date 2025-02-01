@@ -9,21 +9,20 @@ std::ostream& operator<<(std::ostream& os, const buffer_type& vec) {
     return os;
 }
 int main() {
-    std::tuple<buffer_type, buffer_type, buffer_type> nodes{ buffer_type{},buffer_type{},buffer_type{} };
-    std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges{ Adjacent_differences<buffer_type>(), Amplify<buffer_type>(2) };
-    std::get<0>(nodes) = buffer_type{ 1,0,1,0,-1,2,3,1,0,-1,-3,-5 };
-    std::cout << "Sink: " << std::get<0>(nodes) << std::endl;
-    std::get<1>(nodes) = buffer_type(Adjacent_differences<buffer_type>::size(std::get<0>(nodes)));
-    std::get<2>(nodes) = buffer_type(Amplify<buffer_type>::size(std::get<1>(nodes)));
-    std::get<0>(edges).forward(std::get<0>(nodes), std::get<1>(nodes), std::get<0>(edges).params);
-    std::cout << "Jammed1: " << std::get<1>(nodes) << std::endl;
-    std::fill(std::get<0>(nodes).begin(), std::get<0>(nodes).end(), 0);
-    std::get<1>(edges).forward(std::get<1>(nodes), std::get<2>(nodes), std::get<1>(edges).params);
-    std::cout << "Source: " << std::get<2>(nodes) << std::endl;
-    std::get<0>(std::get<1>(edges).params) = 1;
+    buffer_type inputData{ 1, 0, 1, 0, -1, 2, 3, 1, 0, -1, -3, -5 };
+    MOLE::Stack<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges(inputData);
+    std::get<0>(MOLE::get<1>(edges).params) = 2;
+    std::cout << "Stack size is " << std::tuple_size<std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>>>{} << std::endl;
+    std::cout << "Sink: " << MOLE::get<0>(edges)._input << std::endl;
+    MOLE::get<0>(edges).forward(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
+    std::cout << "Jammed1: " << MOLE::get<0>(edges)._output << std::endl;
+    std::fill(MOLE::get<0>(edges)._input.begin(), MOLE::get<0>(edges)._input.end(), 0);
+    MOLE::get<1>(edges).forward(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).params);
+    std::cout << "Source: " << MOLE::get<1>(edges)._output << std::endl;
+    std::get<0>(MOLE::get<1>(edges).params) = 1;
     //sync to GPU
-    std::get<1>(edges).inverse(std::get<1>(nodes), std::get<2>(nodes), std::get<1>(edges).params);
-    std::cout << "Jammed2: " << std::get<1>(nodes) << std::endl;
-    std::get<0>(edges).inverse(std::get<0>(nodes), std::get<1>(nodes), std::get<0>(edges).params);
-    std::cout << "Sink: " << std::get<0>(nodes) << std::endl;
+    MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).params);
+    std::cout << "Jammed2: " << MOLE::get<1>(edges)._input << std::endl;
+    MOLE::get<0>(edges).inverse(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
+    std::cout << "Sink: " << MOLE::get<0>(edges)._input << std::endl;
 }
