@@ -37,7 +37,7 @@ namespace MOLE {
     template<class Head, class... Tail> struct Stack_element<0, Stack<Head, Tail...>> { using type = Head;};
 
     template<std::size_t I, class myType>
-    typename myType& get(Stack<myType>& t) noexcept {
+    myType& get(Stack<myType>& t) noexcept {
         return t;
     };
     template<std::size_t I, class myType, class... OtherTypes>
@@ -46,7 +46,7 @@ namespace MOLE {
         for (int i = I; i > 0; i--) {
             element = reinterpret_cast<void*>(&(t._others));
         }
-        auto ref = reinterpret_cast<Stack_element<I, Stack<myType, OtherTypes...>>::type*>(element);
+        auto ref = reinterpret_cast<typename Stack_element<I, Stack<myType, OtherTypes...>>::type*>(element);
         return *ref;
     };
 }
