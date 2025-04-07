@@ -68,9 +68,11 @@ std::ostream& operator<<(std::ostream& os, const std::vector<data_type> &vec) {
 }
 int main() {
     auto device = goopax::default_device(goopax::env_CPU);
-    std::tuple<buffer_type, buffer_type> nodes{ buffer_type{},buffer_type{} };
-    std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges{ Adjacent_differences<buffer_type>(device), Amplify<buffer_type>(device,2) };
     buffer_type inputData{ device, { 1,0,1,0,-1,2,3,1,0,-1,-3,-5 }};
+    std::tuple<buffer_type, buffer_type> nodes{ buffer_type{},buffer_type{} };
+    std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges{ Adjacent_differences<buffer_type>(device), Amplify<buffer_type>(device,1) };
+    const params_type factor{ 2 };
+    std::get<1>(edges).params.copy_from_host(&factor);
     std::cout << "Sink: " << inputData.to_vector() << std::endl;
     std::get<0>(nodes) = buffer_type( device, Adjacent_differences<buffer_type>::size(inputData));
     std::get<1>(nodes) = buffer_type( device, Amplify<buffer_type>::size(std::get<0>(nodes)));
@@ -86,12 +88,8 @@ int main() {
     std::get<1>(nodes) = std::move(endBuffer1);
 
     //sync to GPU
-    std::cout << "Amplification factor before move assignment: " << std::get<0>(std::get<1>(edges).params.to_vector().front()) << std::endl;
-    const params_type factor{ 1 };
-    std::get<1>(edges).params.copy_from_host(&factor);
-    params_type newfactor{ 99 };
-    std::get<1>(edges).params.copy_to_host(&newfactor);
-    std::cout << "Amplification factor after issuing GPU sync: " << std::get<0>(std::get<1>(edges).params.to_vector().front()) << std::endl;
+    params_type newfactor{ 1 };
+    std::get<1>(edges).params.copy_from_host(&newfactor);
 
     std::get<1>(edges).inverse(std::get<0>(nodes), std::get<1>(nodes));//BUG: Factor change is not synchronised from within kernel queue?
     std::vector<data_type> intermediateBuffer2(11);
