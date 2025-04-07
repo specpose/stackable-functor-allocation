@@ -21,7 +21,7 @@ template<> struct MOLE::Node<buffer_type> {
 //template<typename functor_t, typename... other_functors> MOLE::Stack<functor_t, other_functors...>::Stack(goopax::goopax:device& device, typename functor_t::input_type& input, std::size_t index=0) : _myself(device,input), _index(index), _others(_myself._output,++_index) {};
 template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_type>{
     goopax::buffer<params_type> params{};
-    Adjacent_differences(buffer_type& input) : MOLE::Node<buffer_type>(input), params(device, 1) {
+    Adjacent_differences(buffer_type& input) : MOLE::Node<buffer_type>(input, [](buffer_type& input) -> std::size_t { return input.size() - 1; }), params(device, 1) {
         forward.assign(device, [this](goopax::resource<data_type>& input, goopax::resource<data_type>& output) {
             goopax::resource<params_type> p{params};
             _forward(input,output,p);
@@ -84,6 +84,7 @@ int main() {
     MOLE::Stack<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges(inputData);
     const params_type factor{ 2 };
     MOLE::get<1>(edges).params.copy_from_host(&factor);
+    std::cout << "Stack size is " << std::tuple_size<std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>>>{} << std::endl;
     std::cout << "Sink: " << inputData.to_vector() << std::endl;
     MOLE::get<0>(edges).forward(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output);
     std::cout << "Jammed1: " << MOLE::get<0>(edges)._output.to_vector() << std::endl;
