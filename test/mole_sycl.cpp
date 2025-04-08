@@ -5,43 +5,104 @@
 using data_type = int;
 using buffer_type = sycl::buffer<data_type>;
 using params_type = std::tuple<data_type>;
-namespace MOLE {
-    template<> struct Invertible<buffer_type> {
-        using input_type = buffer_type;
-        using output_type = input_type;
-        Invertible(buffer_type& input) : _input(input), _output(sycl::range<1>{size()}) {}
-        virtual std::size_t size() { return _input.size(); }
-        buffer_type& _input;
-        buffer_type _output;
-    };
-}
-template<> struct Adjacent_differences<buffer_type> : public MOLE::Invertible<buffer_type> {
+//static auto my_handler = [](sycl::exception_list e_list) { for (std::exception_ptr const& e : e_list) { try { std::rethrow_exception(e); } catch (std::exception const& e) { std::terminate(); } }};
+static sycl::queue queue1(sycl::cpu_selector_v, { sycl::property::queue::in_order{} });
+static sycl::queue queue2(sycl::cpu_selector_v, { sycl::property::queue::in_order{} });
+template<> struct MOLE::Node<buffer_type> {
+    using input_type = buffer_type;
+    using output_type = input_type;
+    Node(
+        buffer_type& input,
+        std::function<std::size_t(buffer_type&)> f = [](buffer_type& input) -> std::size_t { return input.size(); }
+    ) : _input(input), _output(sycl::range<1>{f(input)}) { }
+    buffer_type& _input;
+    buffer_type _output;
+};
+template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_type> {
     sycl::buffer<params_type> params{ sycl::range<1>{1} };
     std::vector<params_type> params_data{ {} };
-    Adjacent_differences(sycl::queue& queue, buffer_type& input) : MOLE::Invertible<buffer_type>(input), _queue(queue) {
+    Adjacent_differences(buffer_type& input) : MOLE::Node<buffer_type>(input, [](buffer_type& input) -> std::size_t { return input.size() - 1; }) {
         params.set_final_data(params_data.data());
     }
-    static void forward(buffer_type& input, buffer_type& output, decltype(params)& p) {}
-    static void inverse(buffer_type& input, buffer_type& output, decltype(params)& p) {}
-    sycl::queue& _queue;
+    static void forward(buffer_type& input, buffer_type& output) {
+        queue1.submit([&](sycl::handler& cgh) {
+            sycl::accessor in{ input, cgh, sycl::read_only };
+            sycl::accessor out{ output, cgh, sycl::write_only };
+            cgh.single_task<class k1>([=]() {
+                for (size_t i = 1; i < in.size(); i++) {
+                    out[i-1] = in[i] - in[i-1];
+                }
+            });
+        });
+    }
+    static void inverse(buffer_type& input, buffer_type& output) {
+        queue2.submit([&](sycl::handler& cgh) {
+            sycl::accessor in{ input, cgh, sycl::write_only };
+            sycl::accessor out{ output, cgh, sycl::read_only };
+            cgh.single_task<class k2>([=]() {
+                for (size_t i = 0; i < out.size(); i++) {
+                    in[i+1] = in[i] + out[i];
+                }
+            });
+        });
+    }
 };
-template<> struct Amplify<buffer_type> : public MOLE::Invertible<buffer_type> {
+template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
     sycl::buffer<params_type> params{ sycl::range<1>{1} };
     std::vector<params_type> params_data{ {} };
-    Amplify(sycl::queue& queue, buffer_type& input, int s) : MOLE::Invertible<buffer_type>(input), _queue(queue) {
+    Amplify(buffer_type& input, int s=1) : MOLE::Node<buffer_type>(input) {
         std::get<0>(params_data.front()) = s;
         params.set_final_data(params_data.data());
     }
-    static void forward(buffer_type& input, buffer_type& output, decltype(params)& p) {}
-    static void inverse(buffer_type& input, buffer_type& output, decltype(params)& p) {}
-    sycl::queue& _queue;
+    static void forward(buffer_type& input, buffer_type& output) {
+        queue1.submit([&](sycl::handler& cgh) {
+            sycl::accessor in{ input, cgh, sycl::read_only };
+            sycl::accessor out{ output, cgh, sycl::write_only };
+            cgh.parallel_for<class k3>(sycl::range{ out.size() }, [=](sycl::id<1> idx)
+            {
+                out[idx] = 2 * in[idx];
+            });
+        });
+    }
+    static void inverse(buffer_type& input, buffer_type& output) {
+        queue2.submit([&](sycl::handler& cgh) {
+            sycl::accessor in{ input, cgh, sycl::write_only };
+            sycl::accessor out{ output, cgh, sycl::read_only };
+            cgh.parallel_for<class k4>(sycl::range{ in.size() }, [=](sycl::id<1> idx)
+            {
+                in[idx] = out[idx] / 1;
+            });
+        });
+    }
 };
-static auto my_handler = [](sycl::exception_list e_list) { for (std::exception_ptr const& e : e_list) {try { std::rethrow_exception(e);} catch (std::exception const& e) {std::terminate();}}};
-int main() {
-    sycl::queue queue(sycl::cpu_selector_v,my_handler);
+int main(int, char**) {
     std::vector<typename buffer_type::value_type> inputVector{ 1,0,1,0,-1,2,3,1,0,-1,-3,-5 };
-    buffer_type inputBuffer{ inputVector };
-    Adjacent_differences<buffer_type> adj(queue, inputBuffer);
-    Amplify<buffer_type> ampl(queue, adj._output, 2);
-    std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges{ adj, ampl };
+    buffer_type inputData{ inputVector };
+    MOLE::Stack<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges(inputData);
+    std::cout << "Stack size is " << std::tuple_size<std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>>>{} << std::endl;
+    MOLE::get<0>(edges).forward(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output);
+    MOLE::get<1>(edges).forward(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output);
+    queue1.wait();
+    /*sycl::host_accessor sink1(inputData);
+    std::cout << "\nSink: ";
+    for (int i = 0; i < sink1.size(); i++) { printf("%d,", sink1[i]); }
+    sycl::host_accessor jammed1(MOLE::get<0>(edges)._output);
+    std::cout << "\nJammed1: ";
+    for (int i = 0; i < jammed1.size(); i++) { printf("%d,",jammed1[i]); }
+    sycl::host_accessor source(MOLE::get<1>(edges)._output);
+    std::cout << "\nSource: ";
+    for (int i = 0; i < source.size(); i++) { printf("%d,",source[i]); }
+    */
+    //sync to GPU
+
+    MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output);
+    MOLE::get<0>(edges).inverse(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output);
+    queue1.wait();
+    queue2.wait();
+    sycl::host_accessor jammed2(MOLE::get<0>(edges)._output);
+    std::cout << "\nJammed2: ";
+    for (int i = 0; i < jammed2.size(); i++) { printf("%d,", jammed2[i]); }
+    sycl::host_accessor sink2(inputData);
+    std::cout << "\nSink: ";
+    for (int i = 0; i < sink2.size(); i++) { printf("%d,", sink2[i]); }
 }
