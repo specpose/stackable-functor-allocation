@@ -12,8 +12,8 @@
 using data_type = int;
 
 template<typename buffer_t> struct Adjacent_differences_PP : public INV::ParameterPack<buffer_t> { data_type first_value = 0; };
-template<typename buffer_t> struct Adjacent_differences : public INV::Invertable<buffer_t> {
-    Adjacent_differences() : INV::Invertable<buffer_t>{} {}
+template<typename buffer_t> struct Adjacent_differences : public INV::Invertible<buffer_t> {
+    Adjacent_differences() : INV::Invertible<buffer_t>{} {}
     static void forward(Adjacent_differences_PP<buffer_t>& pack) { 
         pack.first_value = pack._input->at(0);
         for (std::size_t i = 1; i < pack._input->size(); i++)
@@ -33,8 +33,8 @@ template<typename buffer_t> struct Adjacent_differences : public INV::Invertable
 };
 
 template<typename buffer_t> struct Amplify_PP : public INV::ParameterPack<buffer_t> { data_type factor = 2; };
-template<typename buffer_t> struct Amplify : public INV::Invertable<buffer_t> {
-    Amplify() : INV::Invertable<buffer_t>{} {}
+template<typename buffer_t> struct Amplify : public INV::Invertible<buffer_t> {
+    Amplify() : INV::Invertible<buffer_t>{} {}
     static void forward(Amplify_PP<buffer_t>& pack) {
         assert(pack._input != nullptr);
         assert(pack._output != nullptr);

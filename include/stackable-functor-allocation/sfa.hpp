@@ -46,8 +46,8 @@ namespace INV {
         container_t* _output = nullptr;
         container_t* _input = nullptr;
     };
-    template<typename container_t> struct Invertable {
-        Invertable() {}
+    template<typename container_t> struct Invertible {
+        Invertible() {}
         static void forward(ParameterPack<container_t>&) = delete;
         static void inverse(ParameterPack<container_t>&) = delete;
         static std::size_t size(const ParameterPack<container_t>&) = delete;
