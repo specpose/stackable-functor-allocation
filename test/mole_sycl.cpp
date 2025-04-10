@@ -23,22 +23,27 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
     Adjacent_differences(buffer_type& input) : MOLE::Node<buffer_type>(input, [](buffer_type& input) -> std::size_t { return input.size() - 1; }) {
         params.set_final_data(params_data.data());
     }
-    static void forward(buffer_type& input, buffer_type& output) {
+    static void forward(buffer_type& input, buffer_type& output, decltype(params)& params) {
         queue.submit([&](sycl::handler& cgh) {
             sycl::accessor in{ input, cgh, sycl::read_only };
             sycl::accessor out{ output, cgh, sycl::write_only };
+            sycl::accessor p{ params, cgh, sycl::read_write };
+            //std::get<0>(p[0]) = in[0];
             cgh.single_task<class k1>([=]() {
+                std::get<0>(p[0]) = in[0];
                 for (size_t i = 1; i < in.size(); i++) {
                     out[i-1] = in[i] - in[i-1];
                 }
             });
         });
     }
-    static void inverse(buffer_type& input, buffer_type& output) {
+    static void inverse(buffer_type& input, buffer_type& output, decltype(params)& params) {
         queue.submit([&](sycl::handler& cgh) {
             sycl::accessor in{ input, cgh, sycl::write_only };
             sycl::accessor out{ output, cgh, sycl::read_only };
+            sycl::accessor p{ params, cgh, sycl::read_only };
             cgh.single_task<class k2>([=]() {
+                in[0] = std::get<0>(p[0]);
                 for (size_t i = 0; i < out.size(); i++) {
                     in[i+1] = in[i] + out[i];
                 }
@@ -53,23 +58,25 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
         std::get<0>(params_data.front()) = s;
         params.set_final_data(params_data.data());
     }
-    static void forward(buffer_type& input, buffer_type& output) {
+    static void forward(buffer_type& input, buffer_type& output, decltype(params)& params) {
         queue.submit([&](sycl::handler& cgh) {
             sycl::accessor in{ input, cgh, sycl::read_only };
             sycl::accessor out{ output, cgh, sycl::write_only };
+            sycl::accessor p{ params, cgh, sycl::read_write };
             cgh.parallel_for<class k3>(sycl::range{ out.size() }, [=](sycl::id<1> idx)
             {
-                out[idx] = 2 * in[idx];
+                out[idx] = std::get<0>(p[0]) * in[idx];
             });
         });
     }
-    static void inverse(buffer_type& input, buffer_type& output) {
+    static void inverse(buffer_type& input, buffer_type& output, decltype(params)& params) {
         queue.submit([&](sycl::handler& cgh) {
             sycl::accessor in{ input, cgh, sycl::write_only };
             sycl::accessor out{ output, cgh, sycl::read_only };
+            sycl::accessor p{ params, cgh, sycl::read_only };
             cgh.parallel_for<class k4>(sycl::range{ in.size() }, [=](sycl::id<1> idx)
             {
-                in[idx] = out[idx] / 1;
+                in[idx] = out[idx] / std::get<0>(p[0]);
             });
         });
     }
@@ -91,19 +98,19 @@ int main(int, char**) {
     queue = sycl::queue(sycl::cpu_selector_v, { sycl::property::queue::in_order{} });
     std::cout << "Sink: ";
     std::cout << inputData << std::endl;
-    MOLE::get<0>(edges).forward(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output);
+    MOLE::get<0>(edges).forward(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
     std::cout << "Jammed1: ";
     std::cout << MOLE::get<0>(edges)._output << std::endl;
-    MOLE::get<1>(edges).forward(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output);
+    MOLE::get<1>(edges).forward(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<0>(edges).params);
     std::cout << "Source: ";
     std::cout << MOLE::get<1>(edges)._output << std::endl;
 
     //sync to GPU
 
-    MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output);
+    MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<0>(edges).params);
     std::cout << "Jammed2: ";
     std::cout << MOLE::get<0>(edges)._output << std::endl;
-    MOLE::get<0>(edges).inverse(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output);
+    MOLE::get<0>(edges).inverse(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
     std::cout << "Sink: ";
     std::cout << inputData << std::endl;
     queue.throw_asynchronous();
