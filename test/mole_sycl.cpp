@@ -8,6 +8,16 @@ using buffer_type = sycl::buffer<data_type>;
 using params_type = utility::tuple::Tuple<data_type>;
 //static auto my_handler = [](sycl::exception_list e_list) { for (std::exception_ptr const& e : e_list) { try { std::rethrow_exception(e); } catch (std::exception const& e) { std::terminate(); } }};
 static sycl::queue queue;
+auto async_handler_object = [](sycl::exception_list exceptions) {
+    for (auto e : exceptions) {
+        try {
+            std::rethrow_exception(e);
+        }
+        catch (sycl::exception const& e) {
+            std::cout << "Caught asynchronous SYCL exception:\n"<< e.what() << std::endl;
+        }
+    }
+};
 template<> struct MOLE::Node<buffer_type> {
     using input_type = buffer_type;
     using output_type = input_type;
@@ -20,10 +30,11 @@ template<> struct MOLE::Node<buffer_type> {
 };
 template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_type> {
     sycl::buffer<params_type> params;
-    std::vector<params_type> params_data{ { 0 } };
+    std::vector<params_type> params_data{ params_type{ 0 } };
     Adjacent_differences(buffer_type& input) : MOLE::Node<buffer_type>(input, [](buffer_type& input) -> std::size_t { return input.size() - 1; }),
                                                 params(params_data.data(), sycl::range<1>{1})
     {
+        params.set_final_data(params_data.data());
     }
     static void forward(buffer_type& input, buffer_type& output, decltype(params)& params) {
         queue.submit([&](sycl::handler& cgh) {
@@ -38,6 +49,7 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
                 }
             });
         });
+        queue.wait();
     }
     static void inverse(buffer_type& input, buffer_type& output, decltype(params)& params) {
         queue.submit([&](sycl::handler& cgh) {
@@ -51,14 +63,16 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
                 }
             });
         });
+        queue.wait();
     }
 };
 template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
     sycl::buffer<params_type> params;
-    std::vector<params_type> params_data{ { 1 } };
+    std::vector<params_type> params_data{ params_type{ 1 } };
     Amplify(buffer_type& input, int s=1) : MOLE::Node<buffer_type>(input),
                                             params(params_data.data(), sycl::range<1>{1})
     {
+        params.set_final_data(params_data.data());
         sycl::host_accessor factor(params, sycl::write_only);
         utility::tuple::get<0>(factor[0]) = s;
     }
@@ -72,6 +86,7 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
                 out[idx] = utility::tuple::get<0>(p[0]) * in[idx];
             });
         });
+        queue.wait();
     }
     static void inverse(buffer_type& input, buffer_type& output, decltype(params)& params) {
         queue.submit([&](sycl::handler& cgh) {
@@ -83,6 +98,7 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
                 in[idx] = out[idx] / utility::tuple::get<0>(p[0]);
             });
         });
+        queue.wait();
     }
 };
 std::ostream& operator<<(std::ostream& os, buffer_type& buf) {
@@ -99,8 +115,10 @@ int main(int, char**) {
     MOLE::Stack<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges(inputData);
     std::cout << "Stack size is " << std::tuple_size<std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>>>{} << std::endl;
     try {
-    queue = sycl::queue(sycl::cpu_selector_v, { sycl::property::queue::in_order{} });
+    queue = sycl::queue(sycl::cpu_selector_v, async_handler_object, { sycl::property::queue::in_order{} });
+    queue.wait();
     //sycl::host_accessor factor(MOLE::get<1>(edges).params, sycl::write_only);
+    //utility::tuple::get<0>(factor[0]) = 2;
     std::cout << "Sink: ";
     std::cout << inputData << std::endl;
     MOLE::get<0>(edges).forward(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
@@ -118,7 +136,7 @@ int main(int, char**) {
     MOLE::get<0>(edges).inverse(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
     std::cout << "Sink: ";
     std::cout << inputData << std::endl;
-    queue.throw_asynchronous();
+    queue.wait_and_throw();
     } catch (const sycl::exception& e) {
         std::cout << "Exception caught: " << e.what() << std::endl;
     }
