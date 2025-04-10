@@ -1,10 +1,11 @@
 #include "stackable-functor-allocation/mole.hpp"
 #include <sycl/sycl.hpp>
+#include "stl-tuple/STLTuple.hpp"
 #include <vector>
 #include <iostream>
 using data_type = int;
 using buffer_type = sycl::buffer<data_type>;
-using params_type = std::tuple<data_type>;
+using params_type = utility::tuple::Tuple<data_type>;
 //static auto my_handler = [](sycl::exception_list e_list) { for (std::exception_ptr const& e : e_list) { try { std::rethrow_exception(e); } catch (std::exception const& e) { std::terminate(); } }};
 static sycl::queue queue;
 template<> struct MOLE::Node<buffer_type> {
@@ -18,10 +19,11 @@ template<> struct MOLE::Node<buffer_type> {
     buffer_type _output;
 };
 template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_type> {
-    sycl::buffer<params_type> params{ sycl::range<1>{1} };
-    std::vector<params_type> params_data{ {} };
-    Adjacent_differences(buffer_type& input) : MOLE::Node<buffer_type>(input, [](buffer_type& input) -> std::size_t { return input.size() - 1; }) {
-        params.set_final_data(params_data.data());
+    sycl::buffer<params_type> params;
+    std::vector<params_type> params_data{ { 0 } };
+    Adjacent_differences(buffer_type& input) : MOLE::Node<buffer_type>(input, [](buffer_type& input) -> std::size_t { return input.size() - 1; }),
+                                                params(params_data.data(), sycl::range<1>{1})
+    {
     }
     static void forward(buffer_type& input, buffer_type& output, decltype(params)& params) {
         queue.submit([&](sycl::handler& cgh) {
@@ -30,7 +32,7 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
             sycl::accessor p{ params, cgh, sycl::read_write };
             //std::get<0>(p[0]) = in[0];
             cgh.single_task<class k1>([=]() {
-                std::get<0>(p[0]) = in[0];
+                utility::tuple::get<0>(p[0]) = in[0];
                 for (size_t i = 1; i < in.size(); i++) {
                     out[i-1] = in[i] - in[i-1];
                 }
@@ -43,7 +45,7 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
             sycl::accessor out{ output, cgh, sycl::read_only };
             sycl::accessor p{ params, cgh, sycl::read_only };
             cgh.single_task<class k2>([=]() {
-                in[0] = std::get<0>(p[0]);
+                in[0] = utility::tuple::get<0>(p[0]);
                 for (size_t i = 0; i < out.size(); i++) {
                     in[i+1] = in[i] + out[i];
                 }
@@ -52,11 +54,13 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
     }
 };
 template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
-    sycl::buffer<params_type> params{ sycl::range<1>{1} };
-    std::vector<params_type> params_data{ {} };
-    Amplify(buffer_type& input, int s=1) : MOLE::Node<buffer_type>(input) {
-        std::get<0>(params_data.front()) = s;
-        params.set_final_data(params_data.data());
+    sycl::buffer<params_type> params;
+    std::vector<params_type> params_data{ { 1 } };
+    Amplify(buffer_type& input, int s=1) : MOLE::Node<buffer_type>(input),
+                                            params(params_data.data(), sycl::range<1>{1})
+    {
+        sycl::host_accessor factor(params, sycl::write_only);
+        utility::tuple::get<0>(factor[0]) = s;
     }
     static void forward(buffer_type& input, buffer_type& output, decltype(params)& params) {
         queue.submit([&](sycl::handler& cgh) {
@@ -65,7 +69,7 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
             sycl::accessor p{ params, cgh, sycl::read_write };
             cgh.parallel_for<class k3>(sycl::range{ out.size() }, [=](sycl::id<1> idx)
             {
-                out[idx] = std::get<0>(p[0]) * in[idx];
+                out[idx] = utility::tuple::get<0>(p[0]) * in[idx];
             });
         });
     }
@@ -76,7 +80,7 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
             sycl::accessor p{ params, cgh, sycl::read_only };
             cgh.parallel_for<class k4>(sycl::range{ in.size() }, [=](sycl::id<1> idx)
             {
-                in[idx] = out[idx] / std::get<0>(p[0]);
+                in[idx] = out[idx] / utility::tuple::get<0>(p[0]);
             });
         });
     }
@@ -96,18 +100,19 @@ int main(int, char**) {
     std::cout << "Stack size is " << std::tuple_size<std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>>>{} << std::endl;
     try {
     queue = sycl::queue(sycl::cpu_selector_v, { sycl::property::queue::in_order{} });
+    //sycl::host_accessor factor(MOLE::get<1>(edges).params, sycl::write_only);
     std::cout << "Sink: ";
     std::cout << inputData << std::endl;
     MOLE::get<0>(edges).forward(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
     std::cout << "Jammed1: ";
     std::cout << MOLE::get<0>(edges)._output << std::endl;
-    MOLE::get<1>(edges).forward(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<0>(edges).params);
+    MOLE::get<1>(edges).forward(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).params);
     std::cout << "Source: ";
     std::cout << MOLE::get<1>(edges)._output << std::endl;
 
     //sync to GPU
 
-    MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<0>(edges).params);
+    MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).params);
     std::cout << "Jammed2: ";
     std::cout << MOLE::get<0>(edges)._output << std::endl;
     MOLE::get<0>(edges).inverse(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
