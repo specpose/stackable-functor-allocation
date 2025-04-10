@@ -74,6 +74,14 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
         });
     }
 };
+std::ostream& operator<<(std::ostream& os, buffer_type& buf) {
+    //sycl::accessor jammed1 = buf.get_access<sycl::access_mode::read>();
+    //sycl::host_accessor source = buf.get_host_access();
+    sycl::host_accessor vec(buf, sycl::read_only);
+    std::for_each(vec.begin(), --vec.end(), [&](typename decltype(vec)::value_type e) {os << e << ","; });
+    os << *(--vec.end());
+    return os;
+}
 int main(int, char**) {
     std::vector<typename buffer_type::value_type> inputVector{ 1,0,1,0,-1,2,3,1,0,-1,-3,-5 };
     buffer_type inputData{ inputVector };
@@ -81,28 +89,23 @@ int main(int, char**) {
     std::cout << "Stack size is " << std::tuple_size<std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>>>{} << std::endl;
     try {
     queue = sycl::queue(sycl::cpu_selector_v, { sycl::property::queue::in_order{} });
-    sycl::host_accessor sink1(inputData, sycl::read_only);
-    std::cout << "\nSink: ";
-    for (int i = 0; i < sink1.size(); i++) { printf("%d,", sink1[i]); }
+    std::cout << "Sink: ";
+    std::cout << inputData << std::endl;
     MOLE::get<0>(edges).forward(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output);
-    sycl::accessor jammed1 = MOLE::get<0>(edges)._output.get_access<sycl::access_mode::read>();
-    std::cout << "\nJammed1: ";
-    for (int i = 0; i < jammed1.size(); i++) { printf("%d,", jammed1[i]); }
+    std::cout << "Jammed1: ";
+    std::cout << MOLE::get<0>(edges)._output << std::endl;
     MOLE::get<1>(edges).forward(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output);
-    sycl::host_accessor source = MOLE::get<1>(edges)._output.get_host_access();
-    std::cout << "\nSource: ";
-    for (int i = 0; i < source.size(); i++) { printf("%d,",source[i]); }
+    std::cout << "Source: ";
+    std::cout << MOLE::get<1>(edges)._output << std::endl;
 
     //sync to GPU
 
     MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output);
-    //sycl::host_accessor jammed2 = MOLE::get<0>(edges)._output.get_host_access();
     //std::cout << "\nJammed2: ";
-    //for (int i = 0; i < jammed2.size(); i++) { printf("%d,", jammed2[i]); }
+    //std::cout << MOLE::get<0>(edges)._output << std::endl;
     MOLE::get<0>(edges).inverse(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output);
-    //sycl::host_accessor sink2 = inputData.get_host_access();
     //std::cout << "\nSink: ";
-    //for (int i = 0; i < sink2.size(); i++) { printf("%d,", sink2[i]); }
+    //std::cout << inputData << std::endl;
     queue.throw_asynchronous();
     } catch (const sycl::exception& e) {
         std::cout << "Exception caught: " << e.what() << std::endl;
