@@ -101,11 +101,11 @@ int main(int, char**) {
     //sync to GPU
 
     MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output);
-    //std::cout << "\nJammed2: ";
-    //std::cout << MOLE::get<0>(edges)._output << std::endl;
+    std::cout << "Jammed2: ";
+    std::cout << MOLE::get<0>(edges)._output << std::endl;
     MOLE::get<0>(edges).inverse(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output);
-    //std::cout << "\nSink: ";
-    //std::cout << inputData << std::endl;
+    std::cout << "Sink: ";
+    std::cout << inputData << std::endl;
     queue.throw_asynchronous();
     } catch (const sycl::exception& e) {
         std::cout << "Exception caught: " << e.what() << std::endl;
