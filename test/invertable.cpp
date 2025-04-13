@@ -4,25 +4,21 @@
 #include <algorithm>
 #include <cassert>
 
-#ifndef GOOPAX
 #include <vector>
-#else
-#include <goopax>
-#endif
 using data_type = int;
 
 template<typename buffer_t> struct Adjacent_differences_PP : public INV::ParameterPack<buffer_t> { data_type first_value = 0; };
 template<typename buffer_t> struct Adjacent_differences : public INV::Invertible<buffer_t> {
     Adjacent_differences() : INV::Invertible<buffer_t>{} {}
     static void forward(Adjacent_differences_PP<buffer_t>& pack) { 
-        pack.first_value = pack._input->at(0);
+        pack.first_value = (*pack._input)[0];
         for (std::size_t i = 1; i < pack._input->size(); i++)
-            pack._output->at(i - 1) = pack._input->at(i) - pack._input->at(i - 1);
+            (*pack._output)[i - 1] = (*pack._input)[i] - (*pack._input)[i - 1];
     }
     static void inverse(Adjacent_differences_PP<buffer_t>& pack) {
-        pack._input->at(0) = pack.first_value;
+        (*pack._input)[0] = pack.first_value;
         for (std::size_t i = 0; i < pack._output->size(); i++)
-            pack._input->at(i + 1) = pack._input->at(i) + pack._output->at(i);
+            (*pack._input)[i + 1] = (*pack._input)[i] + (*pack._output)[i];
     }
     static std::size_t size(const Adjacent_differences_PP<buffer_t>& pack) {
         if (pack._input)
@@ -53,24 +49,17 @@ template<typename buffer_t> struct Amplify : public INV::Invertible<buffer_t> {
     }
 };
 
-void print_vector(std::vector<data_type>& vec) {
+void print_vector(std::vector<data_type> vec) {
     std::for_each(vec.begin(), vec.end(), [](data_type e) {std::cout << e << ","; });
 }
 int main()
 {
     std::cout << "Original ";
-#ifndef GOOPAX
     std::vector<data_type> inputVector{1,0,1,0,-1,2,3,1,0,-1,-3,-5};
     std::vector<data_type> outputVector(inputVector.size()-1);
     std::vector<data_type> outputVector2(inputVector.size() - 1);
     print_vector(inputVector);
-#else
-    goopax::goopax_device device = goopax::default_device(goopax::env_ALL);
-    goopax::buffer<data_type> inputVector(device, { 1,0,1,0,-1,2,3,1,0,-1,-3,-5 });
-    goopax::buffer<data_type> outputVector(device, inputVector.size() - 1);
-    goopax::buffer<data_type> outputVector2(device, inputVector.size() - 1);
-    print_vector(inputVector.to_vector());
-#endif
+
     std::cout << std::endl;
     std::tuple<Adjacent_differences_PP<decltype(inputVector)>, Amplify_PP<decltype(outputVector)>> parameters{};//SVM
     std::tuple<Adjacent_differences<decltype(inputVector)>, Amplify<decltype(outputVector)>> stackable{};//kernel queue
@@ -80,9 +69,8 @@ int main()
     std::get<1>(parameters)._output = &outputVector2;
 
     std::get<0>(stackable).forward(std::get<0>(parameters));//par::unseq
-#ifndef GOOPAX
     std::for_each(inputVector.begin(), inputVector.end(), [](data_type& e) { e = 0; });
-#endif
+
     //GPU start
     std::get<1>(stackable).forward(std::get<1>(parameters));
     std::get<1>(stackable).inverse(std::get<1>(parameters));
@@ -90,10 +78,6 @@ int main()
     std::get<0>(stackable).inverse(std::get<0>(parameters));//par::seq => par::unseq if input available
 
     std::cout << "Reverted ";
-#ifndef GOOPAX
     print_vector(inputVector);
-#else
-    print_vector(inputVector.to_vector());
-#endif
     std::cout << std::endl;
 }
