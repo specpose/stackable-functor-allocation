@@ -17,8 +17,6 @@ template<> struct MOLE::Node<buffer_type> {
     buffer_type& _input;
     buffer_type _output;
 };
-//template<typename functor_t > MOLE::Stack<functor_t>::Stack(goopax::goopax_device& device, typename functor_t::input_type& input, std::size_t index = 0) : _myself(device,input) {};
-//template<typename functor_t, typename... other_functors> MOLE::Stack<functor_t, other_functors...>::Stack(goopax::goopax:device& device, typename functor_t::input_type& input, std::size_t index=0) : _myself(device,input), _index(index), _others(_myself._output,++_index) {};
 template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_type>{
     goopax::buffer<params_type> params{};
     Adjacent_differences(buffer_type& input) : MOLE::Node<buffer_type>(input, [](buffer_type& input) -> std::size_t { return input.size() - 1; }), params(device, 1) {
@@ -35,20 +33,20 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
     static void _forward(resource_type& input, resource_type& output, goopax::resource<params_type>& p) {
         std::get<0>(p.front()) = input[0];
         goopax::make_gpu<unsigned int>::type size = input.size();
-        for (unsigned int pos = 1; pos < 13; pos++)//size; pos++)
+        goopax::gpu_for<std::less<>>(1, size, 1, [&](goopax::make_gpu<unsigned int>::type pos)
         {
             output[pos - 1] = input[pos] - input[pos - 1];
-        };
+        });
     }
     goopax::kernel<void(goopax::buffer<data_type>&, goopax::buffer<data_type>&)> inverse;
     static void _inverse(resource_type& input, resource_type& output, goopax::resource<params_type>& p) {
         input[0] = std::get<0>(p.front());
-        for (unsigned int pos = 0; pos < 12; pos++)//Single ALU?
+        goopax::make_gpu<unsigned int>::type size = output.size();
+        goopax::gpu_for<std::less<>>(0, size, 1,[&](goopax::make_gpu<unsigned int>::type pos)//not explicit unrolling?
         {
             input[pos + 1] = input[pos] + output[pos];
-        };
+        });
     }
-    static std::size_t size(const buffer_type& input) { return input.size() - 1; }
 };
 template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type>{
     goopax::buffer<params_type> params{};
@@ -72,7 +70,10 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type>{
     static void _inverse(resource_type& input, resource_type& output, goopax::resource<params_type>& v) {
         goopax::gpu_for_global(0, input.size(), [&output, &input, &v](goopax::make_gpu<unsigned int>::type i) { input[i] = output[i] / std::get<0>(v.front()); });
     }
-    static std::size_t size(const buffer_type& input) { return input.size(); }
+    void setFactor(data_type s) {
+        const params_type factor{ s };
+        params.copy_from_host(&factor);
+    }
 };
 std::ostream& operator<<(std::ostream& os, const std::vector<data_type> &vec) {
     std::for_each(vec.begin(), --vec.end(), [&](typename std::vector<data_type>::value_type e) {os << e << ","; });
@@ -82,8 +83,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<data_type> &vec) {
 int main() {
     buffer_type inputData{ device, { 1,0,1,0,-1,2,3,1,0,-1,-3,-5 }};
     MOLE::Stack<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges(inputData);
-    const params_type factor{ 2 };
-    MOLE::get<1>(edges).params.copy_from_host(&factor);
+    MOLE::get<1>(edges).setFactor(2);
     std::cout << "Stack size is " << std::tuple_size<std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>>>{} << std::endl;
     std::cout << "Sink: " << inputData.to_vector() << std::endl;
     MOLE::get<0>(edges).forward(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output);
@@ -92,8 +92,7 @@ int main() {
     std::cout << "Source: " << MOLE::get<1>(edges)._output.to_vector() << std::endl;
 
     //sync to GPU
-    params_type newfactor{ 1 };
-    MOLE::get<1>(edges).params.copy_from_host(&newfactor);
+    MOLE::get<1>(edges).setFactor(1);
 
     MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output);
     std::cout << "Jammed2: " << MOLE::get<0>(edges)._output.to_vector() << std::endl;
