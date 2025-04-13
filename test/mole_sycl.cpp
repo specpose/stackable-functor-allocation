@@ -30,8 +30,9 @@ template<> struct MOLE::Node<buffer_type> {
 };
 template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_type> {
     sycl::buffer<params_type> params;
-    std::vector<params_type> params_data{ params_type{ 0 } };
+    std::array<params_type,1> params_data;
     Adjacent_differences(buffer_type& input) : MOLE::Node<buffer_type>(input, [](buffer_type& input) -> std::size_t { return input.size() - 1; }),
+                                                params_data{ params_type{ 0 } },
                                                 params(params_data.data(), sycl::range<1>{1})
     {
         params.set_final_data(params_data.data());
@@ -40,7 +41,7 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
         queue.submit([&](sycl::handler& cgh) {
             sycl::accessor in{ input, cgh, sycl::read_only };
             sycl::accessor out{ output, cgh, sycl::write_only };
-            sycl::accessor p{ params, cgh, sycl::read_write };
+            sycl::accessor p{ params, cgh, sycl::write_only };
             //std::get<0>(p[0]) = in[0];
             cgh.single_task<class k1>([=]() {
                 utility::tuple::get<0>(p[0]) = in[0];
@@ -68,13 +69,14 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
 };
 template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
     sycl::buffer<params_type> params;
-    std::vector<params_type> params_data{ params_type{ 1 } };
+    std::array<params_type,1> params_data;
     //sycl::host_accessor<params_type> params_accessor;
     sycl::accessor<params_type, 1, sycl::access_mode::read, sycl::target::device> p;
     sycl::accessor<params_type, 1, sycl::access_mode::write, sycl::target::host_task> params_accessor;
     Amplify(buffer_type& input, int s=1) : MOLE::Node<buffer_type>(input),
-                                            params(params_data.data(), sycl::range<1>{1}),
-                                            p( params )
+                                            params_data{ params_type{ 1 } },
+                                            params(params_data.data(), sycl::range<1>{1})
+                                            ,p( params )
                                             ,params_accessor(params)
     {
         params.set_final_data(params_data.data());
@@ -105,6 +107,11 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
         });
         queue.wait();
     }
+    void setFactor(data_type s) {
+        sycl::host_accessor<params_type>* factor = new sycl::host_accessor<params_type>(params);
+        utility::tuple::get<0>((*factor)[0])=s;
+        delete factor;
+    }
 };
 std::ostream& operator<<(std::ostream& os, buffer_type& buf) {
     //sycl::accessor jammed1 = buf.get_access<sycl::access_mode::read>();
@@ -128,11 +135,13 @@ int main(int, char**) {
     std::cout << "Jammed1: ";
     std::cout << MOLE::get<0>(edges)._output << std::endl;
     //utility::tuple::get<0>(MOLE::get<1>(edges).params_accessor[0]) = 2;//Exception Code: 0xC0000005
+    MOLE::get<1>(edges).setFactor(2);
     MOLE::get<1>(edges).forward(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).p, MOLE::get<1>(edges).params_accessor);
     std::cout << "Source: ";
     std::cout << MOLE::get<1>(edges)._output << std::endl;
 
     //sync to GPU
+    MOLE::get<1>(edges).setFactor(1);
 
     MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).p, MOLE::get<1>(edges).params_accessor);
     std::cout << "Jammed2: ";
