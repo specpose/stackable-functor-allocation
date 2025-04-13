@@ -69,18 +69,22 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
 template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
     sycl::buffer<params_type> params;
     std::vector<params_type> params_data{ params_type{ 1 } };
+    //sycl::host_accessor<params_type> params_accessor;
+    sycl::accessor<params_type, 1, sycl::access_mode::read, sycl::target::device> p;
+    sycl::accessor<params_type, 1, sycl::access_mode::write, sycl::target::host_task> params_accessor;
     Amplify(buffer_type& input, int s=1) : MOLE::Node<buffer_type>(input),
-                                            params(params_data.data(), sycl::range<1>{1})
+                                            params(params_data.data(), sycl::range<1>{1}),
+                                            p( params )
+                                            ,params_accessor(params)
     {
         params.set_final_data(params_data.data());
-        sycl::host_accessor factor(params, sycl::write_only);
-        utility::tuple::get<0>(factor[0]) = s;
     }
-    static void forward(buffer_type& input, buffer_type& output, decltype(params)& params) {
+    static void forward(buffer_type& input, buffer_type& output, decltype(p)& p, decltype(params_accessor)& params_accessor) {
         queue.submit([&](sycl::handler& cgh) {
             sycl::accessor in{ input, cgh, sycl::read_only };
             sycl::accessor out{ output, cgh, sycl::write_only };
-            sycl::accessor p{ params, cgh, sycl::read_write };
+            cgh.require(p);
+            cgh.require(params_accessor);
             cgh.parallel_for<class k3>(sycl::range{ out.size() }, [=](sycl::id<1> idx)
             {
                 out[idx] = utility::tuple::get<0>(p[0]) * in[idx];
@@ -88,11 +92,12 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
         });
         queue.wait();
     }
-    static void inverse(buffer_type& input, buffer_type& output, decltype(params)& params) {
+    static void inverse(buffer_type& input, buffer_type& output, decltype(p)& p, decltype(params_accessor)& params_accessor) {
         queue.submit([&](sycl::handler& cgh) {
             sycl::accessor in{ input, cgh, sycl::write_only };
             sycl::accessor out{ output, cgh, sycl::read_only };
-            sycl::accessor p{ params, cgh, sycl::read_only };
+            cgh.require(p);
+            cgh.require(params_accessor);
             cgh.parallel_for<class k4>(sycl::range{ in.size() }, [=](sycl::id<1> idx)
             {
                 in[idx] = out[idx] / utility::tuple::get<0>(p[0]);
@@ -117,20 +122,19 @@ int main(int, char**) {
     try {
     queue = sycl::queue(sycl::cpu_selector_v, async_handler_object, { sycl::property::queue::in_order{} });
     queue.wait();
-    //sycl::host_accessor factor(MOLE::get<1>(edges).params, sycl::write_only);
-    //utility::tuple::get<0>(factor[0]) = 2;
     std::cout << "Sink: ";
     std::cout << inputData << std::endl;
     MOLE::get<0>(edges).forward(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
     std::cout << "Jammed1: ";
     std::cout << MOLE::get<0>(edges)._output << std::endl;
-    MOLE::get<1>(edges).forward(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).params);
+    //utility::tuple::get<0>(MOLE::get<1>(edges).params_accessor[0]) = 2;//Exception Code: 0xC0000005
+    MOLE::get<1>(edges).forward(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).p, MOLE::get<1>(edges).params_accessor);
     std::cout << "Source: ";
     std::cout << MOLE::get<1>(edges)._output << std::endl;
 
     //sync to GPU
 
-    MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).params);
+    MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).p, MOLE::get<1>(edges).params_accessor);
     std::cout << "Jammed2: ";
     std::cout << MOLE::get<0>(edges)._output << std::endl;
     MOLE::get<0>(edges).inverse(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
