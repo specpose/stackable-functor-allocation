@@ -1,9 +1,24 @@
 # Stackable Functor Allocation
 Is a refactoring pattern. It aims to keep the Functor operator() allocation free and the Functor body free of references. The strict memory is adressed entirely as a *stack*, as heap (size known at compile time), but not as free-store.
-## Algorithm LifeCycle
-1. C++20/STL
-   - Effectively is re-introducing a storage-like class into algorithms which have been originally designed to abstract away the storage class. Keep in mind that a GPU is always a rigid hardware implementation and the scope of the API is not a response to future challenges.
-   - The sized_sentinel_for concept of the ranges API presents another approach to address the same problem. The ranges call syntax is similar to Java and is a radical change in programming paradigm.
-2. C++17/SFA
-   - SFA is a refactoring pattern which also has a Java-like call syntax. Applying stackable functor allocation may lead to code which is compatible to ranges, but ranges has a few abstractions which make it difficult to write low-level code.
-   - It is object-oriented. It helps converting STL programs into something that ressembles a C program.
+## [SFA](test/sfa.cpp)
+The refactoring pattern.
+## [MOLE](test/mole.cpp)
+A related GPU refactoring pattern for invertible functions. Here, the term Stack is not referring to a memory arrangement.
+## [MOLE](test/invertable.cpp)
+Defunct.
+### Installation
+CPU Mode
+```sh
+cmake -B build . -DSFA_BACKEND=CPU
+cmake --build build
+```
+Goopax Mode: Download and extract Goopax to the directory above the project directory.
+```sh
+cmake -B build . -DSFA_BACKEND=GOOPAX
+cmake --build build
+```
+SyCL Mode: Set a SyCL compatible clang compiler in your path.
+```sh
+cmake -B build . -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx -DSFA_BACKEND=INTELSYCL -GNinja
+cmake --build build
+```
