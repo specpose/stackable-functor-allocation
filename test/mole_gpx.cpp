@@ -81,7 +81,8 @@ std::ostream& operator<<(std::ostream& os, const std::vector<data_type> &vec) {
     return os;
 }
 int main() {
-    buffer_type inputData{ device, { 1,0,1,0,-1,2,3,1,0,-1,-3,-5 }};
+    std::vector<data_type> vec{ 1,0,1,0,-1,2,3,1,0,-1,-3,-5 };
+    buffer_type inputData{ device, std::move(vec)};
     MOLE::Stack<Adjacent_differences<buffer_type>, Amplify<buffer_type>> edges(inputData);
     MOLE::get<1>(edges).setFactor(2);
     std::cout << "Stack size is " << std::tuple_size<std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>>>{} << std::endl;

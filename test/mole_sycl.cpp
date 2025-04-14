@@ -6,7 +6,6 @@
 using data_type = int;
 using buffer_type = sycl::buffer<data_type>;
 using params_type = utility::tuple::Tuple<data_type>;
-static sycl::queue queue;
 auto async_handler_object = [](sycl::exception_list exceptions) {
     for (auto e : exceptions) {
         try {
@@ -17,6 +16,7 @@ auto async_handler_object = [](sycl::exception_list exceptions) {
         }
     }
 };
+static sycl::queue queue = sycl::queue(sycl::cpu_selector_v, async_handler_object, { sycl::property::queue::in_order{} });;
 template<> struct MOLE::Node<buffer_type> {
     using input_type = buffer_type;
     using output_type = input_type;
@@ -32,7 +32,7 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
     std::array<params_type,1> params_data;
     Adjacent_differences(buffer_type& input) : MOLE::Node<buffer_type>(input, [](buffer_type& input) -> std::size_t { return input.size() - 1; }),
                                                 params_data{ params_type{ 0 } },
-                                                params(params_data.data(), sycl::range<1>{1})
+                                                params(params_data)
     {
         params.set_final_data(params_data.data());
     }
@@ -73,7 +73,7 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
     //sycl::accessor<params_type, 1, sycl::access_mode::write, sycl::target::host_task> params_accessor;
     Amplify(buffer_type& input, int s=1) : MOLE::Node<buffer_type>(input),
                                             params_data{ params_type{ 1 } },
-                                            params(params_data.data(), sycl::range<1>{1})
+                                            params(params_data)
                                             //,p( params )
                                             //,params_accessor(params)
     {
@@ -126,28 +126,22 @@ int main(int, char**) {
     MOLE::get<1>(edges).setFactor(2);
     std::cout << "Stack size is " << std::tuple_size<std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>>>{} << std::endl;
     try {
-    queue = sycl::queue(sycl::cpu_selector_v, async_handler_object, { sycl::property::queue::in_order{} });
     queue.wait();
-    std::cout << "Sink: ";
-    std::cout << inputData << std::endl;
+    std::cout << "Sink: " << inputData << std::endl;
     MOLE::get<0>(edges).forward(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
-    std::cout << "Jammed1: ";
-    std::cout << MOLE::get<0>(edges)._output << std::endl;
+    std::cout << "Jammed1: " << MOLE::get<0>(edges)._output << std::endl;
     MOLE::get<1>(edges).forward(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).params);
-    std::cout << "Source: ";
-    std::cout << MOLE::get<1>(edges)._output << std::endl;
+    std::cout << "Source: " << MOLE::get<1>(edges)._output << std::endl;
 
     //sync to GPU
     MOLE::get<1>(edges).setFactor(1);
 
     MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).params);
-    std::cout << "Jammed2: ";
-    std::cout << MOLE::get<0>(edges)._output << std::endl;
+    std::cout << "Jammed2: " << MOLE::get<0>(edges)._output << std::endl;
     MOLE::get<0>(edges).inverse(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
-    std::cout << "Sink: ";
-    std::cout << inputData << std::endl;
+    std::cout << "Sink: " << inputData << std::endl;
     queue.wait_and_throw();
     } catch (const sycl::exception& e) {
-        std::cout << "Exception caught: " << e.what() << std::endl;
+    std::cout << "Exception caught: " << e.what() << std::endl;
     }
 }

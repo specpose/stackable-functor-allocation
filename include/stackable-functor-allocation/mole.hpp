@@ -18,7 +18,7 @@ namespace MOLE {
     };
     template<typename functor_t > struct Stack<functor_t> {
         using functor_type = functor_t;
-        Stack(typename functor_t::input_type& input, std::size_t index = 0) : _myself(input) {}
+        Stack(typename functor_t::input_type& input, std::size_t index = 0) : _myself(input), _index(index) {}
         functor_t _myself;
         std::size_t _index;
     };
@@ -26,8 +26,8 @@ namespace MOLE {
         using functor_type = functor_t;
         Stack(typename functor_t::input_type& input, std::size_t index=0) : _myself(input), _index(index), _others(_myself._output,++_index) {}
         functor_t _myself;
-        Stack<other_functors...> _others;
         std::size_t _index;
+        Stack<other_functors...> _others;
     };
     //template<class T> struct Stack_size;
     //template<class... Types> struct Stack_size<Stack<Types...>> : std::integral_constant<std::size_t, sizeof...(Types)> {};
