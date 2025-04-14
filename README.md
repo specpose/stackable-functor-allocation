@@ -1,10 +1,10 @@
 # Stackable Functor Allocation
 Is a refactoring pattern. It aims to keep the Functor operator() allocation free and the Functor body free of references. The strict memory is adressed entirely as a *stack*, as heap (size known at compile time), but not as free-store.
-## [SFA](test/sfa.cpp)
+## [test_SFA](include/stackable-functor-allocation/sfa.hpp)
 The refactoring pattern.
-## [MOLE](test/mole.cpp)
-A related GPU refactoring pattern for invertible functions. Here, the term Stack is not referring to a memory arrangement.
-## [MOLE](test/invertable.cpp)
+## [test_MOLE](include/stackable-functor-allocation/mole.hpp)
+A related GPU refactoring pattern for invertible functions. Here, the memory requirements are relaxed. Not in the original sense of *stack*.
+## [test_INV](test/invertable.cpp)
 Defunct.
 ### Installation
 CPU Mode
