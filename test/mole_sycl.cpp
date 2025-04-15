@@ -35,10 +35,10 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
     {
         params.set_final_data(params_data.data());
     }
-    static void forward(buffer_type& input, buffer_type& output, decltype(params)& params) {
+    void forward() {
         queue.submit([&](sycl::handler& cgh) {
-            sycl::accessor in{ input, cgh, sycl::read_only };
-            sycl::accessor out{ output, cgh, sycl::write_only };
+            sycl::accessor in{ _input, cgh, sycl::read_only };
+            sycl::accessor out{ _output, cgh, sycl::write_only };
             sycl::accessor p{ params, cgh, sycl::write_only };
             //std::get<0>(p[0]) = in[0];
             cgh.single_task<class k1>([=]() {
@@ -50,10 +50,10 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
         });
         queue.wait();
     }
-    static void inverse(buffer_type& input, buffer_type& output, decltype(params)& params) {
+    void inverse() {
         queue.submit([&](sycl::handler& cgh) {
-            sycl::accessor in{ input, cgh, sycl::write_only };
-            sycl::accessor out{ output, cgh, sycl::read_only };
+            sycl::accessor in{ _input, cgh, sycl::write_only };
+            sycl::accessor out{ _output, cgh, sycl::read_only };
             sycl::accessor p{ params, cgh, sycl::read_only };
             cgh.single_task<class k2>([=]() {
                 in[0] = std::get<0>(p[0]);
@@ -78,10 +78,10 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
     {
         params.set_final_data(params_data.data());
     }
-    static void forward(buffer_type& input, buffer_type& output, decltype(params)& params){
+    void forward(){
         queue.submit([&](sycl::handler& cgh) {
-            sycl::accessor in{ input, cgh, sycl::read_only };
-            sycl::accessor out{ output, cgh, sycl::write_only };
+            sycl::accessor in{ _input, cgh, sycl::read_only };
+            sycl::accessor out{ _output, cgh, sycl::write_only };
             sycl::accessor p{ params, cgh, sycl::read_only };
             //cgh.require(p);
             cgh.parallel_for<class k3>(sycl::range{ out.size() }, [=](sycl::id<1> idx)
@@ -91,10 +91,10 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
         });
         queue.wait();
     }
-    static void inverse(buffer_type& input, buffer_type& output, decltype(params)& params){
+    void inverse(){
         queue.submit([&](sycl::handler& cgh) {
-            sycl::accessor in{ input, cgh, sycl::write_only };
-            sycl::accessor out{ output, cgh, sycl::read_only };
+            sycl::accessor in{ _input, cgh, sycl::write_only };
+            sycl::accessor out{ _output, cgh, sycl::read_only };
             sycl::accessor p{ params, cgh, sycl::read_only };
             //cgh.require(p);
             cgh.parallel_for<class k4>(sycl::range{ in.size() }, [=](sycl::id<1> idx)
@@ -127,17 +127,17 @@ int main(int, char**) {
     try {
     queue.wait();
     std::cout << "Sink: " << inputData << std::endl;
-    MOLE::get<0>(edges).forward(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
+    MOLE::get<0>(edges).forward();
     std::cout << "Jammed1: " << MOLE::get<0>(edges)._output << std::endl;
-    MOLE::get<1>(edges).forward(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).params);
+    MOLE::get<1>(edges).forward();
     std::cout << "Source: " << MOLE::get<1>(edges)._output << std::endl;
 
     //sync to GPU
     MOLE::get<1>(edges).setFactor(1);
 
-    MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output, MOLE::get<1>(edges).params);
+    MOLE::get<1>(edges).inverse();
     std::cout << "Jammed2: " << MOLE::get<0>(edges)._output << std::endl;
-    MOLE::get<0>(edges).inverse(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output, MOLE::get<0>(edges).params);
+    MOLE::get<0>(edges).inverse();
     std::cout << "Sink: " << inputData << std::endl;
     queue.wait_and_throw();
     } catch (const sycl::exception& e) {

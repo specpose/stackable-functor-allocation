@@ -20,16 +20,20 @@ template<> struct MOLE::Node<buffer_type> {
 template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_type>{
     goopax::buffer<params_type> params{};
     Adjacent_differences(buffer_type& input) : MOLE::Node<buffer_type>(input, [](buffer_type& input) -> std::size_t { return input.size() - 1; }), params(device, 1) {
-        forward.assign(device, [this](goopax::resource<data_type>& input, goopax::resource<data_type>& output) {
+        forward.assign(device, [this]() {
+            goopax::resource<data_type> input{_input};
+            goopax::resource<data_type> output{_output};
             goopax::resource<params_type> p{params};
             _forward(input,output,p);
             });
-        inverse.assign(device, [this](goopax::resource<data_type>& input, goopax::resource<data_type>& output) {
+        inverse.assign(device, [this]() {
+            goopax::resource<data_type> input{_input};
+            goopax::resource<data_type> output{_output};
             goopax::resource<params_type> p{params};
             _inverse(input,output,p);
             });
     }
-    goopax::kernel<void(goopax::buffer<data_type>&, goopax::buffer<data_type>&)> forward;
+    goopax::kernel<void()> forward;
     static void _forward(resource_type& input, resource_type& output, goopax::resource<params_type>& p) {
         std::get<0>(p.front()) = input[0];
         goopax::make_gpu<unsigned int>::type size = input.size();
@@ -38,7 +42,7 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
             output[pos - 1] = input[pos] - input[pos - 1];
         });
     }
-    goopax::kernel<void(goopax::buffer<data_type>&, goopax::buffer<data_type>&)> inverse;
+    goopax::kernel<void()> inverse;
     static void _inverse(resource_type& input, resource_type& output, goopax::resource<params_type>& p) {
         input[0] = std::get<0>(p.front());
         goopax::make_gpu<unsigned int>::type size = output.size();
@@ -53,20 +57,24 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type>{
     Amplify(buffer_type& input, int s=1) : MOLE::Node<buffer_type>(input), params(device, 1) {
         const std::vector<params_type> myParams{ { s } };
         params = std::move(myParams);
-        forward.assign(device, [this](goopax::resource<data_type>& input, goopax::resource<data_type>& output) {
+        forward.assign(device, [this]() {
+            goopax::resource<data_type> input{_input};
+            goopax::resource<data_type> output{_output};
             goopax::resource<params_type> v{ params };
             _forward(input, output, v);
             });
-        inverse.assign(device, [this](goopax::resource<data_type>& input, goopax::resource<data_type>& output) {
+        inverse.assign(device, [this]() {
+            goopax::resource<data_type> input{_input};
+            goopax::resource<data_type> output{_output};
             goopax::resource<params_type> v{ params };
             _inverse(input, output, v);
             });
     }
-    goopax::kernel<void(goopax::buffer<data_type>&, goopax::buffer<data_type>&)> forward;
+    goopax::kernel<void()> forward;
     static void _forward(resource_type& input, resource_type& output, goopax::resource<params_type>& v) {
         goopax::gpu_for_global(0, output.size(), [&input, &output, &v](goopax::make_gpu<unsigned int>::type i) { output[i] = std::get<0>(v.front()) * input[i]; });
     }
-    goopax::kernel<void(goopax::buffer<data_type>&, goopax::buffer<data_type>&)> inverse;
+    goopax::kernel<void()> inverse;
     static void _inverse(resource_type& input, resource_type& output, goopax::resource<params_type>& v) {
         goopax::gpu_for_global(0, input.size(), [&output, &input, &v](goopax::make_gpu<unsigned int>::type i) { input[i] = output[i] / std::get<0>(v.front()); });
     }
@@ -87,16 +95,16 @@ int main() {
     MOLE::get<1>(edges).setFactor(2);
     std::cout << "Stack size is " << std::tuple_size<std::tuple<Adjacent_differences<buffer_type>, Amplify<buffer_type>>>{} << std::endl;
     std::cout << "Sink: " << inputData.to_vector() << std::endl;
-    MOLE::get<0>(edges).forward(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output);
+    MOLE::get<0>(edges).forward();
     std::cout << "Jammed1: " << MOLE::get<0>(edges)._output.to_vector() << std::endl;
-    MOLE::get<1>(edges).forward(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output);
+    MOLE::get<1>(edges).forward();
     std::cout << "Source: " << MOLE::get<1>(edges)._output.to_vector() << std::endl;
 
     //sync to GPU
     MOLE::get<1>(edges).setFactor(1);
 
-    MOLE::get<1>(edges).inverse(MOLE::get<1>(edges)._input, MOLE::get<1>(edges)._output);
+    MOLE::get<1>(edges).inverse();
     std::cout << "Jammed2: " << MOLE::get<0>(edges)._output.to_vector() << std::endl;
-    MOLE::get<0>(edges).inverse(MOLE::get<0>(edges)._input, MOLE::get<0>(edges)._output);
+    MOLE::get<0>(edges).inverse();
     std::cout << "Sink: " << inputData.to_vector() << std::endl;
 }

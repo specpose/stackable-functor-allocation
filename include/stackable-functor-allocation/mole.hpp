@@ -53,24 +53,24 @@ namespace MOLE {
 template<typename container_t> struct Adjacent_differences : public MOLE::Node<container_t> {
     Adjacent_differences(container_t& input) : MOLE::Node<container_t>(input, [](container_t& input) -> std::size_t { return input.size() - 1; }) {}
     std::tuple<typename container_t::value_type> params{ 0 };
-    static void forward(const container_t& input, container_t& output, decltype(params)& params) {
-        std::get<0>(params) = input.at(0);
-        for (std::size_t i = 1; i < input.size(); i++)
-            output.at(i - 1) = input.at(i) - input.at(i - 1);
+    void forward() {
+        std::get<0>(params) = this->_input.at(0);
+        for (std::size_t i = 1; i < this->_input.size(); i++)
+            this->_output.at(i - 1) = this->_input.at(i) - this->_input.at(i - 1);
     }
-    static void inverse(container_t& input, const container_t& output, decltype(params)& params) {
-        input.at(0) = std::get<0>(params);
-        for (std::size_t i = 0; i < output.size(); i++)
-            input.at(i + 1) = input.at(i) + output.at(i);
+    void inverse() {
+        this->_input.at(0) = std::get<0>(params);
+        for (std::size_t i = 0; i < this->_output.size(); i++)
+            this->_input.at(i + 1) = this->_input.at(i) + this->_output.at(i);
     }
 };
 template<typename container_t> struct Amplify : public MOLE::Node<container_t> {
     Amplify(container_t& input, typename container_t::value_type factor=1) : MOLE::Node<container_t>(input), params{ factor } {}
     std::tuple<typename container_t::value_type> params{ 0 };
-    static void forward(const container_t& input, container_t& output, decltype(params)& params) {
-        std::transform(input.begin(), input.end(), output.begin(), [&](auto in) { return std::get<0>(params) * in; });
+    void forward() {
+        std::transform(this->_input.begin(), this->_input.end(), this->_output.begin(), [&](auto in) { return std::get<0>(params) * in; });
     }
-    static void inverse(container_t& input, const container_t& output, decltype(params)& params) {
-        std::transform(output.begin(), output.end(), input.begin(), [&](auto out) { return out / std::get<0>(params); });
+    void inverse() {
+        std::transform(this->_output.begin(), this->_output.end(), this->_input.begin(), [&](auto out) { return out / std::get<0>(params); });
     }
 };
