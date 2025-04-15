@@ -1,11 +1,10 @@
 #include "stackable-functor-allocation/mole.hpp"
 #include <sycl/sycl.hpp>
-#include "stl-tuple/STLTuple.hpp"
 #include <vector>
 #include <iostream>
 using data_type = int;
 using buffer_type = sycl::buffer<data_type>;
-using params_type = utility::tuple::Tuple<data_type>;
+using params_type = std::tuple<data_type>;
 auto async_handler_object = [](sycl::exception_list exceptions) {
     for (auto e : exceptions) {
         try {
@@ -43,7 +42,7 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
             sycl::accessor p{ params, cgh, sycl::write_only };
             //std::get<0>(p[0]) = in[0];
             cgh.single_task<class k1>([=]() {
-                utility::tuple::get<0>(p[0]) = in[0];
+                std::get<0>(p[0]) = in[0];
                 for (size_t i = 1; i < in.size(); i++) {
                     out[i-1] = in[i] - in[i-1];
                 }
@@ -57,7 +56,7 @@ template<> struct Adjacent_differences<buffer_type> : public MOLE::Node<buffer_t
             sycl::accessor out{ output, cgh, sycl::read_only };
             sycl::accessor p{ params, cgh, sycl::read_only };
             cgh.single_task<class k2>([=]() {
-                in[0] = utility::tuple::get<0>(p[0]);
+                in[0] = std::get<0>(p[0]);
                 for (size_t i = 0; i < out.size(); i++) {
                     in[i+1] = in[i] + out[i];
                 }
@@ -87,7 +86,7 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
             //cgh.require(p);
             cgh.parallel_for<class k3>(sycl::range{ out.size() }, [=](sycl::id<1> idx)
             {
-                out[idx] = utility::tuple::get<0>(p[0]) * in[idx];
+                out[idx] = std::get<0>(p[0]) * in[idx];
             });
         });
         queue.wait();
@@ -100,14 +99,14 @@ template<> struct Amplify<buffer_type> : public MOLE::Node<buffer_type> {
             //cgh.require(p);
             cgh.parallel_for<class k4>(sycl::range{ in.size() }, [=](sycl::id<1> idx)
             {
-                in[idx] = out[idx] / utility::tuple::get<0>(p[0]);
+                in[idx] = out[idx] / std::get<0>(p[0]);
             });
         });
         queue.wait();
     }
     void setFactor(data_type s) {
         sycl::host_accessor<params_type>* factor = new sycl::host_accessor<params_type>(params);
-        utility::tuple::get<0>((*factor)[0])=s;
+        std::get<0>((*factor)[0])=s;
         delete factor;
     }
 };
